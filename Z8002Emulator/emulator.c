@@ -68,6 +68,28 @@ void findByteRegister(uint8_t regToFind){
 	return;
 }
 
+uint8_t* returnByteRegisterPointer(uint8_t regToFind, State8002* state){
+	switch(regToFind){
+		case 0x00: return &state->R0; break; //Higher
+		case 0x01: return &state->R1; break;
+		case 0x02: return &state->R2; break;
+		case 0x03: return &state->R3; break;
+		case 0x04: return &state->R4; break;
+		case 0x05: return &state->R5; break;
+		case 0x06: return &state->R6; break;
+		case 0x07: return &state->R7; break;
+		case 0x08: return &state->R0+8; break; //Lower
+		case 0x09: return &state->R1+8; break;
+		case 0x0a: return &state->R2+8; break;
+		case 0x0b: return &state->R3+8; break;
+		case 0x0c: return &state->R4+8; break;
+		case 0x0d: return &state->R5+8; break;
+		case 0x0e: return &state->R6+8; break;
+		case 0x0f: return &state->R7+8; break;
+		default: printf("WRONG"); return &state->R10; break;
+	}
+}
+
 int Disassemble8002(unsigned short *codebuffer, int pc){
 	unsigned short *code = &codebuffer[pc];
 
@@ -124,13 +146,45 @@ int Emulate8002(State8002* state){
 
 	Disassemble8002(state->memory, state->pc);
 
+	state->R0 = 0x0010;
+	state->R3 = 0x1000;
+
 	state->pc+=1;
+	done = 1;
 
 	switch(upperHalf)
 	{
 		case 0x00: switch(field1){
-						case 0x00:	state->pc += 1; break;
-						default: done = 1; break;
+						case 0x00:	{
+									state->pc += 1;
+									uint32_t destinationReg = returnByteRegisterPointer(field2, state);
+									//uint8_t *destinationReg = returnByteRegisterPointer(field2, state);
+									uint8_t* lowerBits = destinationReg+8;
+									uint8_t* higherBits = destinationReg;
+									printf("%04x\n", destinationReg);
+									printf("haha %04x\n", &state->R0);
+									printf("%02x\n", higherBits);
+									printf("%04x\n", opcode[1]);
+									// printf("%04x\n", state->R0);
+									// uint8_t* testPointer = &state->R0;
+									// *testPointer = 0;
+									if(field2 <= 0x7){
+										//Higher bits
+										*higherBits = (*higherBits + (opcode[1] >> 8));
+			
+									}
+									else{
+										//Lower bits
+										*lowerBits = (*lowerBits + (opcode[1]));
+									}
+									break; //ADDB Rbd, #data
+								}
+						default:    {
+									uint8_t* destinationRegs = returnByteRegisterPointer(field2, state);
+									uint8_t* sourceRegs = returnByteRegisterPointer(field1, state);
+									*destinationRegs = *destinationRegs + *sourceRegs;
+								 	break;
+								 }
 				} break;
 		case 0x12: break;
 		default: printf("dicks"); break;
