@@ -68,6 +68,28 @@ void findByteRegister(uint8_t regToFind){
 	return;
 }
 
+void findRegister(uint8_t regToFind){
+	switch(regToFind){
+		case 0x00: printf("R0"); break;
+		case 0x01: printf("R1"); break;
+		case 0x02: printf("R2"); break;
+		case 0x03: printf("R3"); break;
+		case 0x04: printf("R4"); break;
+		case 0x05: printf("R5"); break;
+		case 0x06: printf("R6"); break;
+		case 0x07: printf("R7"); break;
+		case 0x08: printf("R8"); break;
+		case 0x09: printf("R9"); break;
+		case 0x0a: printf("R10"); break;
+		case 0x0b: printf("R11"); break;
+		case 0x0c: printf("R12"); break;
+		case 0x0d: printf("R13"); break;
+		case 0x0e: printf("R14"); break;
+		default: printf("WRONG"); break;
+	}
+	return;
+}
+
 uint8_t* returnByteRegisterPointer(uint8_t regToFind, State8002* state){
 	uint8_t* bytePointer;
 	switch(regToFind){
@@ -126,8 +148,118 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 									findByteRegister(field2);
 									printf(", @");
 									findByteRegister(field1);
+									break;
+					} break;
+		case 0x01: switch(field1){
+						case 0x00:  printf("ADD ");				//ADD Rd, #data
+									findRegister(field2);
+									printf(", #%02x", code[1]);
 									opwords = 2;
 									break;
+						default:	printf("ADD ");				//ADD Rd, @Rs
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+
+					} break;
+		case 0x02:	switch(field1){
+						case 0x00:	printf("SUBB ");			//SUBB Rbd, #data
+									findByteRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("SUBB ");			//SUBB Rbd, @Rs
+									findByteRegister(field2);
+									printf(", @");
+									findByteRegister(field1);
+									break;
+					} break;
+		case 0x03:	switch(field1){		
+						case 0x00:	printf("SUB ");				//SUB Rd, #data
+									findRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("SUB ");				//SUB Rd, @Rs
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+					} break;
+
+		case 0x04:	switch(field1){
+						case 0x00:	printf("ORB ");				//ORB Rbd, #data
+									findByteRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("ORB ");				//ORB Rbd, @Rs
+									findByteRegister(field2);
+									printf(", @");
+									findByteRegister(field1);
+									break;
+					} break;
+		case 0x05:	switch(field1){
+						case 0x00: 	printf("OR ");				//OR Rd, #data
+									findRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("OR ");				//OR Rd, @Rs
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+					} break;
+		case 0x06:	switch(field1){
+						case 0x00:  printf("ANDB ");			//ANDB Rbd, #data
+									findByteRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("ANDB ");			//ANDB Rbd, @Rs
+									findByteRegister(field2);
+									printf(", @");
+									findByteRegister(field1);
+									break;
+					} break;
+		case 0x07:	switch(field1){
+						case 0x00:	printf("AND ");				//AND Rd, #data
+									findRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("AND ");				//AND Rd, @Rs
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+					} break;
+		case 0x08:	switch(field1){
+						case 0x00:  printf("XORB ");			//XORB Rbd, #data
+									findByteRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("XORB ");			//XORB Rbd, @Rs
+									findByteRegister(field2);
+									printf(", @");
+									findByteRegister(field1);
+									break;
+					} break;
+		case 0x09:	switch(field1){
+						case 0x00:  printf("XOR ");				//XOR Rd, #data
+									findRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("XOR ");
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+
 					} break;
 		case 0x12: printf("Gay cam"); break;
 		default: printf("What the fuck happened"); break;
