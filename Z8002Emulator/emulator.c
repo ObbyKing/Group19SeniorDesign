@@ -69,25 +69,28 @@ void findByteRegister(uint8_t regToFind){
 }
 
 uint8_t* returnByteRegisterPointer(uint8_t regToFind, State8002* state){
+	uint8_t* bytePointer;
 	switch(regToFind){
-		case 0x00: return &state->R0; break; //Higher
-		case 0x01: return &state->R1; break;
-		case 0x02: return &state->R2; break;
-		case 0x03: return &state->R3; break;
-		case 0x04: return &state->R4; break;
-		case 0x05: return &state->R5; break;
-		case 0x06: return &state->R6; break;
-		case 0x07: return &state->R7; break;
-		case 0x08: return &state->R0+8; break; //Lower
-		case 0x09: return &state->R1+8; break;
-		case 0x0a: return &state->R2+8; break;
-		case 0x0b: return &state->R3+8; break;
-		case 0x0c: return &state->R4+8; break;
-		case 0x0d: return &state->R5+8; break;
-		case 0x0e: return &state->R6+8; break;
-		case 0x0f: return &state->R7+8; break;
-		default: printf("WRONG"); return &state->R10; break;
+		case 0x00: bytePointer = &state->R0; bytePointer += 1; break; //Higher
+		case 0x01: bytePointer = &state->R1; bytePointer += 1; break;
+		case 0x02: bytePointer = &state->R2; bytePointer += 1; break;
+		case 0x03: bytePointer = &state->R3; bytePointer += 1; break;
+		case 0x04: bytePointer = &state->R4; bytePointer += 1; break;
+		case 0x05: bytePointer = &state->R5; bytePointer += 1; break;
+		case 0x06: bytePointer = &state->R6; bytePointer += 1; break;
+		case 0x07: bytePointer = &state->R7; bytePointer += 1; break;
+		case 0x08: &state->R0; break; //Lower
+		case 0x09: &state->R1; break;
+		case 0x0a: &state->R2; break;
+		case 0x0b: &state->R3; break;
+		case 0x0c: &state->R4; break;
+		case 0x0d: &state->R5; break;
+		case 0x0e: &state->R6; break;
+		case 0x0f: &state->R7; break;
+		default: printf("WRONG"); return bytePointer; break;
 	}
+
+	return bytePointer;
 }
 
 int Disassemble8002(unsigned short *codebuffer, int pc){
@@ -146,8 +149,8 @@ int Emulate8002(State8002* state){
 
 	Disassemble8002(state->memory, state->pc);
 
-	state->R0 = 0x0010;
-	state->R3 = 0x1000;
+	state->R0 = 0x0134;
+	state->R3 = 0x1078;
 
 	state->pc+=1;
 	done = 1;
@@ -182,6 +185,12 @@ int Emulate8002(State8002* state){
 						default:    {
 									uint8_t* destinationRegs = returnByteRegisterPointer(field2, state);
 									uint8_t* sourceRegs = returnByteRegisterPointer(field1, state);
+									// printf("%02x\n", destinationRegs);
+									// printf("%02x\n", sourceRegs);
+									// printf("%04x\n", &state->R0);
+									// printf("%04x\n", &state->R3);
+									// printf("%02x\n", *(destinationRegs));
+									// printf("%02x\n", *(sourceRegs));
 									*destinationRegs = *destinationRegs + *sourceRegs;
 								 	break;
 								 }
@@ -190,8 +199,8 @@ int Emulate8002(State8002* state){
 		default: printf("dicks"); break;
 	}
 
-	printf("\t");
-	printf("R0 %04x ", state->R0);
+	//printf("\t");
+	printf("R0 %04x\n", state->R0);
 	return done;
 }
 
