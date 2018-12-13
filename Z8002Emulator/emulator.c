@@ -117,7 +117,7 @@ void findLongRegister(uint8_t regToFind){
 		case 0x0a: printf("RR10"); break;
 		case 0x0c: printf("RR12"); break;
 		case 0x0e: printf("RR14"); break;
-		default: printf("Couldn't find long register"); break;	
+		default: printf("Couldn't find long register"); break;
 	}
 	return;
 }
@@ -128,7 +128,7 @@ void findQuadRegister(uint8_t regToFind){
 		case 0x04: printf("RQ4"); break;
 		case 0x08: printf("RQ8"); break;
 		case 0x0c: printf("RQ12"); break;
-		default: printf("Couldn't find quad register"); break;	
+		default: printf("Couldn't find quad register"); break;
 	}
 	return;
 }
@@ -154,6 +154,30 @@ uint8_t* returnByteRegisterPointer(uint8_t regToFind, State8002* state){
 		case 0x0f: &state->R7; break;
 		default: printf("WRONG"); return bytePointer; break;
 	}
+  return bytePointer;
+}
+
+  uint16_t* returnRegisterPointer(uint8_t regToFind, State8002* state){
+  	uint16_t* bytePointer;
+  	switch(regToFind){
+  		case 0x00: bytePointer = &state->R0; break;
+  		case 0x01: bytePointer = &state->R1; break;
+  		case 0x02: bytePointer = &state->R2; break;
+  		case 0x03: bytePointer = &state->R3; break;
+  		case 0x04: bytePointer = &state->R4; break;
+  		case 0x05: bytePointer = &state->R5; break;
+  		case 0x06: bytePointer = &state->R6; break;
+  		case 0x07: bytePointer = &state->R7; break;
+  		case 0x08: bytePointer = &state->R8; break;
+  		case 0x09: bytePointer = &state->R9; break;
+  		case 0x0a: bytePointer = &state->R10; break;
+  		case 0x0b: bytePointer = &state->R11; break;
+  		case 0x0c: bytePointer = &state->R12; break;
+  		case 0x0d: bytePointer = &state->R13; break;
+  		case 0x0e: bytePointer = &state->R14; break;
+  		case 0x0f: bytePointer = &state->sp; break;
+  		default: printf("WRONG"); return bytePointer; break;
+  	}
 
 	return bytePointer;
 }
@@ -218,7 +242,7 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 									findByteRegister(field1);
 									break;
 					} break;
-		case 0x03:	switch(field1){		
+		case 0x03:	switch(field1){
 						case 0x00:	printf("SUB ");				//SUB Rd, #data
 									findRegister(field2);
 									printf(", #%02x", code[1]);
@@ -314,7 +338,7 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 									findByteRegister(field2);
 									printf(", @");
 									findByteRegister(field1);
-									break;					
+									break;
 					} break;
 		case 0x0b:	switch(field1){
 						case 0x00:	printf("CP ");				//CP Rd, #data
@@ -332,11 +356,11 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 						case 0x00:	printf("COMB @");			//COMB @Rd
 									findByteRegister(field1);
 									break;
-						case 0x01:	printf("CPB @");			//CPB @Rd, #data	
+						case 0x01:	printf("CPB @");			//CPB @Rd, #data
 									findByteRegister(field1);
 									printf(", #%02x", code[1]);
 									opwords = 2;
-									break;						
+									break;
 						case 0x02:	printf("NEGB @");			//NEGB @Rd
 									findByteRegister(field1);
 									break;
@@ -354,7 +378,7 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 						case 0x08:	printf("CLRB @");			//CLRB @Rd
 									findByteRegister(field1);
 									break;
-						default:	printf("Whups!")
+						default:	printf("Whups!");
 					} break;
 		case 0x0d:	switch(field2){
 						case 0x00:	printf("COM @");			//COM @Rd
@@ -390,7 +414,7 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 					} break;
 		case 0x0e:	printf("NOP"); break;
 		case 0x0f:	printf("LD EPU"); break;					//TODO: IMPLEMENT THIS!
-		
+
 		case 0x10:	switch(field1){
 						case 0x00:	printf("CPL ");				//CPL RRd, #data
 									findLongRegister(field2);
@@ -462,7 +486,7 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 					break;
 		case 0x18:	switch(field1){
 						case 0x00:	printf("MULTL ");			//MULTL RQd, #data
-									findQuadRegister(field2);	
+									findQuadRegister(field2);
 									printf(", #%02x%02x", code[1], code[2]);
 									opwords = 3;
 									break;
@@ -541,8 +565,8 @@ int Emulate8002(State8002* state){
 
 	Disassemble8002(state->memory, state->pc);
 
-	state->R0 = 0x0134;
-	state->R3 = 0x1078;
+	state->R0 = 0x1111;
+	state->R3 = 0x1111;
 
 	state->pc+=1;
 	done = 1;
@@ -552,29 +576,32 @@ int Emulate8002(State8002* state){
 		case 0x00: switch(field1){
 						case 0x00:	{
 									state->pc += 1;
-									// uint32_t destinationReg = returnByteRegisterPointer(field2, state);
-									// //uint8_t *destinationReg = returnByteRegisterPointer(field2, state);
-									// uint8_t* lowerBits = destinationReg+8;
-									// uint8_t* higherBits = destinationReg;
-									// printf("%04x\n", destinationReg);
-									// printf("haha %04x\n", &state->R0);
-									// printf("%02x\n", higherBits);
-									// printf("%04x\n", opcode[1]);
-									// // printf("%04x\n", state->R0);
-									// // uint8_t* testPointer = &state->R0;
-									// // *testPointer = 0;
-									// if(field2 <= 0x7){
-									// 	//Higher bits
-									// 	*higherBits = (*higherBits + (opcode[1] >> 8));
-									//
-									// }
-									// else{
-									// 	//Lower bits
-									// 	*lowerBits = (*lowerBits + (opcode[1]));
-									// }
-									// break; //ADDB Rbd, #data
+									uint32_t destinationReg = returnByteRegisterPointer(field2, state);
+									//uint8_t *destinationReg = returnByteRegisterPointer(field2, state);
+									uint8_t* lowerBits = destinationReg+8;
+									uint8_t* higherBits = destinationReg;
+									printf("%04x\n", destinationReg);
+									printf("haha %04x\n", &state->R0);
+									printf("%02x\n", higherBits);
+									printf("%04x\n", opcode[1]);
+									// printf("%04x\n", state->R0);
+									// uint8_t* testPointer = &state->R0;
+									// *testPointer = 0;
+									if(field2 <= 0x7){
+										//Higher bits
+										*higherBits = (*higherBits + (opcode[1] >> 8));
+
+									}
+									else{
+										//Lower bits
+										*lowerBits = (*lowerBits + (opcode[1]));
+									}
+									break; //ADDB Rbd, #data
 								}
 						default:    {
+
+
+
 									uint8_t* destinationRegs = returnByteRegisterPointer(field2, state);
 									uint8_t* sourceRegs = returnByteRegisterPointer(field1, state);
 									// printf("%02x\n", destinationRegs);
@@ -588,6 +615,15 @@ int Emulate8002(State8002* state){
 								 }
 				} break;
 		case 0x12: break;
+    case 0b10000001:{
+      printf("%02x\n", field1);
+      printf("%02x\n", field2);
+      uint16_t* destinationRegs = returnRegisterPointer(field2, state);
+      uint16_t* sourceRegs = returnRegisterPointer(field1, state);
+
+      *destinationRegs = fix_16(fix_16(*destinationRegs) + fix_16(*sourceRegs));
+    }
+
 		default: printf("dicks"); break;
 	}
 
