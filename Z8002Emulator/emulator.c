@@ -1,7 +1,11 @@
-#include <stdio.h>
+ 	#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
+#include <arpa/inet.h>
+
+
+
 
 typedef struct ConditionCodes {
 	uint8_t		c:1; // Carry flag
@@ -44,6 +48,19 @@ int parity(int x, int size){
 	}
 	return (0 == (p & 0x1));
 }
+
+uint16_t fix_16(uint16_t i){
+	return htons(i);
+}
+uint32_t fix_32(uint32_t i){
+	return htonl(i);
+}
+uint64_t fix_64(uint64_t i){
+	uint64_t upperHalf = (i & 0xFFFFFFFF00000000) >> 32;
+	uint64_t lowerHalf = i & 0x00000000FFFFFFFF;
+	return ((uint64_t)htonl(lowerHalf) << 32) + (uint64_t)htonl(upperHalf);
+}
+
 
 void findByteRegister(uint8_t regToFind){
 	switch(regToFind){
@@ -160,27 +177,27 @@ int Emulate8002(State8002* state){
 		case 0x00: switch(field1){
 						case 0x00:	{
 									state->pc += 1;
-									uint32_t destinationReg = returnByteRegisterPointer(field2, state);
-									//uint8_t *destinationReg = returnByteRegisterPointer(field2, state);
-									uint8_t* lowerBits = destinationReg+8;
-									uint8_t* higherBits = destinationReg;
-									printf("%04x\n", destinationReg);
-									printf("haha %04x\n", &state->R0);
-									printf("%02x\n", higherBits);
-									printf("%04x\n", opcode[1]);
-									// printf("%04x\n", state->R0);
-									// uint8_t* testPointer = &state->R0;
-									// *testPointer = 0;
-									if(field2 <= 0x7){
-										//Higher bits
-										*higherBits = (*higherBits + (opcode[1] >> 8));
-			
-									}
-									else{
-										//Lower bits
-										*lowerBits = (*lowerBits + (opcode[1]));
-									}
-									break; //ADDB Rbd, #data
+									// uint32_t destinationReg = returnByteRegisterPointer(field2, state);
+									// //uint8_t *destinationReg = returnByteRegisterPointer(field2, state);
+									// uint8_t* lowerBits = destinationReg+8;
+									// uint8_t* higherBits = destinationReg;
+									// printf("%04x\n", destinationReg);
+									// printf("haha %04x\n", &state->R0);
+									// printf("%02x\n", higherBits);
+									// printf("%04x\n", opcode[1]);
+									// // printf("%04x\n", state->R0);
+									// // uint8_t* testPointer = &state->R0;
+									// // *testPointer = 0;
+									// if(field2 <= 0x7){
+									// 	//Higher bits
+									// 	*higherBits = (*higherBits + (opcode[1] >> 8));
+									//
+									// }
+									// else{
+									// 	//Lower bits
+									// 	*lowerBits = (*lowerBits + (opcode[1]));
+									// }
+									// break; //ADDB Rbd, #data
 								}
 						default:    {
 									uint8_t* destinationRegs = returnByteRegisterPointer(field2, state);
@@ -228,6 +245,31 @@ void ReadFileIntoMemoryAt(State8002* state, char* filename, uint32_t offset){
 State8002* Init8002(void){
 	State8002* state = calloc(1, sizeof(State8002));
 	state->memory = malloc(0x10000); // 64k
+
+
+	// uint8_t *p8 = &state->R0 + 0x0000;
+	// uint16_t *p16 = &state->R0 + 0x0000;
+	// uint32_t *p32 = &state->R0 + 0x0000;
+	// uint64_t *p64 = &state->R0 + 0x0000;
+	//
+	//
+	//
+	// uint64_t ll = 0x123456789abcdeff;
+	// *p64 = fix_64(ll);
+	//
+	// for(int i = 0; i<8; i++)
+	// 	printf("%x\n",*(p8+i));
+	//
+	// for(int i = 0; i<4; i++)
+	// 	printf("%x\n",fix_16(*(p16+i)));
+	//
+	// for(int i = 0; i<2; i++)
+	// 	printf("%x\n",fix_32(*(p32+i)));
+	//
+	// printf("%llx\n",fix_64(*(p64)));
+
+
+
 	return state;
 }
 
