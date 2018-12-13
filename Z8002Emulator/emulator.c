@@ -63,7 +63,7 @@ void findByteRegister(uint8_t regToFind){
 		case 0x0d: printf("RL5"); break;
 		case 0x0e: printf("RL6"); break;
 		case 0x0f: printf("RL7"); break;
-		default: printf("WRONG"); break;
+		default: printf("Couldn't find byte register"); break;
 	}
 	return;
 }
@@ -85,7 +85,33 @@ void findRegister(uint8_t regToFind){
 		case 0x0c: printf("R12"); break;
 		case 0x0d: printf("R13"); break;
 		case 0x0e: printf("R14"); break;
-		default: printf("WRONG"); break;
+		default: printf("Couldn't find register"); break;
+	}
+	return;
+}
+
+void findLongRegister(uint8_t regToFind){
+	switch(regToFind){
+		case 0x00: printf("RR0"); break;
+		case 0x02: printf("RR2"); break;
+		case 0x04: printf("RR4"); break;
+		case 0x06: printf("RR6"); break;
+		case 0x08: printf("RR8"); break;
+		case 0x0a: printf("RR10"); break;
+		case 0x0c: printf("RR12"); break;
+		case 0x0e: printf("RR14"); break;
+		default: printf("Couldn't find long register"); break;	
+	}
+	return;
+}
+
+void findQuadRegister(uint8_t regToFind){
+	switch(regToFind){
+		case 0x00: printf("RQ0"); break;
+		case 0x04: printf("RQ4"); break;
+		case 0x08: printf("RQ8"); break;
+		case 0x0c: printf("RQ12"); break;
+		default: printf("Couldn't find quad register"); break;	
 	}
 	return;
 }
@@ -254,14 +280,231 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 									printf(", #%02x", code[1]);
 									opwords = 2;
 									break;
-						default:	printf("XOR ");
+						default:	printf("XOR ");				//XOR Rd, @Rs
 									findRegister(field2);
 									printf(", @");
 									findRegister(field1);
 									break;
 
 					} break;
-		case 0x12: printf("Gay cam"); break;
+		case 0x0a:	switch(field1){
+						case 0x00:  printf("CPB "); 			//CPB Rbd, #data
+									findByteRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("CPB ");				//CPB Rbd, @Rs
+									findByteRegister(field2);
+									printf(", @");
+									findByteRegister(field1);
+									break;					
+					} break;
+		case 0x0b:	switch(field1){
+						case 0x00:	printf("CP ");				//CP Rd, #data
+									findRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("CP ");				//CP Rd, @Rs
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+					} break;
+		case 0x0c:	switch(field2){
+						case 0x00:	printf("COMB @");			//COMB @Rd
+									findByteRegister(field1);
+									break;
+						case 0x01:	printf("CPB @");			//CPB @Rd, #data	
+									findByteRegister(field1);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;						
+						case 0x02:	printf("NEGB @");			//NEGB @Rd
+									findByteRegister(field1);
+									break;
+						case 0x04:	printf("TESTB @");			//TESTB @Rd
+									findByteRegister(field1);
+									break;
+						case 0x05:	printf("LDB @");			//LDB @Rd, #data
+									findByteRegister(field1);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						case 0x06:	printf("TSETB @");			//TSETB @Rd
+									findByteRegister(field1);
+									break;
+						case 0x08:	printf("CLRB @");			//CLRB @Rd
+									findByteRegister(field1);
+									break;
+						default:	printf("Whups!")
+					} break;
+		case 0x0d:	switch(field2){
+						case 0x00:	printf("COM @");			//COM @Rd
+									findRegister(field1);
+									break;
+						case 0x01:	printf("CP @");				//CP @Rd, #data
+									findRegister(field1);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						case 0x02:	printf("NEG @");			//NEG @Rd
+									findRegister(field1);
+									break;
+						case 0x04:	printf("TEST @");			//TEST @Rd
+									findRegister(field1);
+									break;
+						case 0x05:	printf("LD @");				//LD @Rd, #data
+									findRegister(field1);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						case 0x06:	printf("TSET @");			//TSET @Rd
+									findRegister(field1);
+									break;
+						case 0x08:	printf("CLR @");			//CLR @Rd
+									findRegister(field1);
+									break;
+						case 0x09:	printf("PUSH @");			//PUSH @Rd, #data
+									findRegister(field1);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+					} break;
+		case 0x0e:	printf("NOP"); break;
+		case 0x0f:	printf("LD EPU"); break;					//TODO: IMPLEMENT THIS!
+		
+		case 0x10:	switch(field1){
+						case 0x00:	printf("CPL ");				//CPL RRd, #data
+									findLongRegister(field2);
+									printf(", #%02x%02x", code[1], code[2]);
+									opwords = 3;
+									break;
+						default:	printf("CPL ");				//CPL RRd, @Rs
+									findLongRegister(field2);
+									printf(", @");
+									findLongRegister(field1);
+									break;
+					} break;
+
+		case 0x11:	printf("PUSHL @");							//PUSHL @Rd, @Rs
+					findLongRegister(field1);
+					printf(", @");
+					findLongRegister(field2);
+					break;
+		case 0x12: 	switch(field1){
+						case 0x00:	printf("SUBL ");			//SUBL RRd, #data
+									findLongRegister(field2);
+									printf(", #%02x%02x", code[1], code[2]);
+									opwords = 3;
+									break;
+						default:	printf("SUBL ");			//SUBL RRd, @Rs
+									findLongRegister(field2);
+									printf(", @");
+									findLongRegister(field1);
+									break;
+					} break;
+		case 0x13:	printf("PUSH @");							//PUSH @Rd, @Rs
+					findRegister(field1);
+					printf(", @");
+					findRegister(field2);
+					break;
+		case 0x14:  switch(field1){
+						case 0x00:	printf("LDL ");				//LDL RRd, #data
+									findLongRegister(field2);
+									printf(", #%02x%02x", code[1], code[2]);
+									opwords = 3;
+									break;
+						default:	printf("LDL ");				//LDL RRd, @Rs
+									findLongRegister(field2);
+									printf(", @");
+									findLongRegister(field1);
+									break;
+					} break;
+		case 0x15:	printf("POPL @");							//POPL @Rd, @Rs
+					findLongRegister(field2);
+					printf(", @");
+					findLongRegister(field1);
+					break;
+		case 0x16:	switch(field1){
+						case 0x00:	printf("ADDL ");			//ADDL RRd, #data
+									findLongRegister(field2);
+									printf(", #%02x%02x", code[1], code[2]);
+									opwords = 3;
+									break;
+						default:	printf("ADDL ");			//ADDL RRd, @Rs
+									findLongRegister(field2);
+									printf(", @");
+									findLongRegister(field1);
+									break;
+					} break;
+		case 0x17:	printf("POP @");							//POP @Rd, @Rs
+					findRegister(field2);
+					printf(", @");
+					findRegister(field1);
+					break;
+		case 0x18:	switch(field1){
+						case 0x00:	printf("MULTL ");			//MULTL RQd, #data
+									findQuadRegister(field2);	
+									printf(", #%02x%02x", code[1], code[2]);
+									opwords = 3;
+									break;
+						default:	printf("MULTL ");			//MULTL RQd, @Rs
+									findQuadRegister(field2);
+									printf(", @");
+									findQuadRegister(field1);
+									break;
+					} break;
+		case 0x19:	switch(field1){
+						case 0x00:	printf("MULT ");			//MULT RRd, #data
+									findLongRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("MULT ");			//MULT RRd, @Rs
+									findLongRegister(field2);
+									printf(", @");
+									findLongRegister(field1);
+									break;
+					} break;
+		case 0x1a:	switch(field1){
+						case 0x00:	printf("DIVL ");			//DIVL RQd, #data
+									findQuadRegister(field2);
+									printf(", #%02x%02x", code[1], code[2]);
+									opwords = 3;
+									break;
+						default:	printf("DIVL ");			//DIVL RQd, @Rs
+									findQuadRegister(field2);
+									printf(", @");
+									findQuadRegister(field1);
+									break;
+					} break;
+		case 0x1b:	switch(field1){
+						case 0x00:	printf("DIV ");				//DIV RRd, #data
+									findLongRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("DIV ");				//DIV RRd, @Rs
+									findLongRegister(field2);
+									printf(", @");
+									findLongRegister(field1);
+									break;
+					} break;
+		case 0x1c:	printf("TODO: Gotta implement");
+		case 0x1d:	printf("LDL @");							//LDL @Rd, RRs
+					findLongRegister(field1);
+					printf(", ");
+					findLongRegister(field2);
+					break;
+		case 0x1e:	printf("JP ");								//JP cc, @Rd
+					printf(field2);
+					printf(", @");
+					findRegister(field1);
+					break;
+		case 0x1f:	printf("CALL @");
+					findRegister(field1);
+					break;
 		default: printf("What the fuck happened"); break;
 	}
 
