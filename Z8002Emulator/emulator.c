@@ -505,6 +505,120 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 		case 0x1f:	printf("CALL @");
 					findRegister(field1);
 					break;
+
+		case 0x20:	switch(field1){
+						case 0x00:	printf("LDB ");				//LDB Rbd, #data
+									findByteRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("LDB ");				//LDB Rbd, @Rs
+									findByteRegister(field2);
+									printf(", @");
+									findByteRegister(field1);
+									break;
+					} break;
+		case 0x21:	switch(field1){
+						case 0x00:	printf("LD ");				//LD Rd, #data
+									findRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("LD ");				//LD Rd, @Rs
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+					} break;
+		case 0x22:	switch(field1){
+						case 0x00:	printf("RESB ");			//TODO: IMPLEMENT
+									break;
+						default:	printf("RESB @");			//RESB @Rd, #b
+									findByteRegister(field1);
+									printf(", %01x", field2);
+									break;
+					} break;
+		case 0x23:	switch(field1){
+						case 0x00:	printf("RES ");				//TODO: IMPLEMENT
+									break;
+						default:	printf("RES @");			//RES @Rd, #b
+									findRegister(field1);
+									printf(", #%01x", field2);
+									break;
+					} break;
+		case 0x24:	switch(field1){
+						case 0x00:	printf("SETB ");			//TODO: Implement
+									break;
+						default:	printf("SETB @");			//SETB @Rd, #b
+									findByteRegister(field1);
+									printf(", #%01x", field2);
+									break;
+					} break;
+		case 0x25:	switch(field1){
+						case 0x00:	printf("SET ");				//TODO: Implement
+									break;
+						default:	printf("SET @");			//SET @Rd, #b
+									findRegister(field1);
+									printf(", #%01x", field2);
+									break;
+					} break;
+		case 0x26:	switch(field1){
+						case 0x00:	printf("BITB ");			//TODO: Implement
+									break;
+						default:	printf("BITB @");			//BITB @Rd, #b
+									findByteRegister(field1);
+									printf(", #%01x", field2);
+									break;
+					} break;
+		case 0x27:	switch(field1){
+						case 0x00:	printf("BIT ");				//TODO: Implement
+									break;
+						default:	printf("BIT @");			//BIT @Rd, #b
+									findRegister(field1);
+									printf(", #%01x", field2);
+									break;
+					} break;
+		case 0x28:	printf("INCB @");							//INCB @Rd, #n
+					findByteRegister(field1);
+					printf(", #%01x", field2);
+					break;
+		case 0x29:	printf("INC @");							//INC @Rd, #n
+					findRegister(field1);
+					printf(", #%01x", field2);
+					break;
+		case 0x2a:	printf("DECB @");							//DECB @Rd, #n
+					findByteRegister(field1);
+					printf(", #%01x", field2);
+					break;
+		case 0x2b:	printf("DEC @");							//DEC @Rd, #n
+					findRegister(field1);
+					printf(", #%01x", field2);
+					break;
+		case 0x2c:	printf("EXB ");								//EXB Rd, @Rs
+					findByteRegister(field2);
+					printf(", @");
+					findByteRegister(field1);
+					break;
+		case 0x2d:	printf("EX ");								//EX Rd, @Rs
+					findRegister(field2);
+					printf(", @");
+					findRegister(field1);
+					break;
+		case 0x2e:	printf("LDB @");							//LDB @Rd, Rbs
+					findByteRegister(field1);
+					printf(", ");
+					findByteRegister(field2);
+					break;
+		case 0x2f:	printf("LD @");								//LD @Rd, Rs
+					findRegister(field1);
+					printf(", ");
+					findRegister(field2);
+					break;
+		case 0x30:	switch(field1){
+						case 0x00:	printf("LDRB ");			//LDRB
+						default:	printf("LDB ");				//LDB Rbd, Rs(#disp)
+									break;
+					} break;
 		default: printf("What the fuck happened"); break;
 	}
 
