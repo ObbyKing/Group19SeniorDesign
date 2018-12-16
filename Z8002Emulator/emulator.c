@@ -1,8 +1,9 @@
- 	#include <stdio.h>
+#include <stdio.h>
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <arpa/inet.h>
+//#include <arpa/inet.h>
+#include <winsock2.h>
 
 
 
@@ -546,6 +547,84 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 		case 0x1f:	printf("CALL @");
 					findRegister(field1);
 					break;
+
+		case 0x20:  switch(field1){	
+						case 0x00:	printf("LD ");				//LD Rbd, #data
+									findByteRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+
+						default:	printf("LDB ");				//LDB Rbd, @Rs
+									findByteRegister(field2);
+									printf(", @");
+									findByteRegister(field1);
+									break;
+
+					}	break;
+
+		case 0x21:	switch(field1){	
+						case 0x00:	printf("LD ");				//LD Rd, #data
+									findRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+
+						default:	printf("LDB ");				//LDB Rd, @Rs
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+
+					}	break;
+
+		case 0x22:	switch(field1){	//TODO
+						case 0x00:	printf("RESB ");				//RESB Rbd, Rs
+									findRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+
+						default:	printf("RESB ");				//RESB @Rd, #b
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+
+					}	break;
+
+		case 0x23:	switch(field1){	//TODO
+						case 0x00:	printf("RES ");				//RES Rd, Rs
+									findRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+
+						default:	printf("RES ");				//RES @Rd, #b
+									findRegister(field2);
+									printf(", @");
+									findRegister(field1);
+									break;
+
+					}	break;
+
+		case 0x30:	switch(field1){	
+						case 0x00:	printf("LRRB ");				//LD Rbd, #data
+									findByteRegister(field2);
+									printf(", #%02x", code[1]);
+									opwords = 2;
+									break;
+
+						default:	printf("LDB ");				//LDB Rbd, Rs(#disp)
+									findByteRegister(field2);
+									printf(", (");
+									findByteRegister(field1);
+									printf(", #%02x", code[1]);
+									printf(", )");
+									break;
+
+					}	break;
+
 		default: printf("What the fuck happened"); break;
 	}
 
