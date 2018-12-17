@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-//#include <arpa/inet.h>
-#include <winsock2.h>
+#include <arpa/inet.h>
+//#include <winsock2.h>
 
 
 
@@ -557,7 +557,7 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 									findByteRegister(field2);
 									printf(", @");
 									findByteRegister(field1);
-									break;D
+									break;
 					} break;
 
 		case 0x21:	switch(field1){	
@@ -669,7 +669,7 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 					findRegister(field2);
 					break;
 		case 0x30:	switch(field1){	
-						case 0x00:	printf("LRRB ");				//LD Rbd, #data
+						case 0x00:	printf("LRRB ");			//LDRB Rbd, address
 									findByteRegister(field2);
 									printf(", #%02x", code[1]);
 									opwords = 2;
@@ -681,9 +681,387 @@ int Disassemble8002(unsigned short *codebuffer, int pc){
 									findByteRegister(field1);
 									printf(", #%02x", code[1]);
 									printf(", )");
+									opwords = 2;
 									break;
 
-					}	break;
+					} break;
+		case 0x31:	switch(field1){
+						case 0x00:	printf("LDR ");				//LDR Rd, address TODO
+									findRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("LD ");				//LD Rd, Rs(#disp)
+									findRegister(field2);
+									printf(", ");
+									findRegister(field1);
+									printf("(#%04x)", code[1]);
+									opwords = 2;
+									break;
+					} break;
+		case 0x32:	switch(field1){
+						case 0x00:	printf("LDRB %04x, ", code[1]);	//LDRB address, Rbs TODO
+									findByteRegister(field2);
+									opwords = 2;
+									break;
+						default:	printf("LDB ");				//LDB Rd(#disp), Rbs
+									findByteRegister(field1);
+									printf("(#%04x), ", code[1]);
+									findByteRegister(field2);
+									opwords = 2;
+									break;
+					} break;
+		case 0x33:	switch(field1){
+						case 0x00:	printf("LDR %04x, ", code[1]); //LDR address, Rs TODO
+									findRegister(field2);
+									opwords = 2;
+									break;
+						default:	printf("LD ");				//LD Rd(#disp), Rbs
+									findRegister(field1);
+									printf("(#%04x), ", code[1]);
+									findRegister(field2);
+									opwords = 2;
+									break;
+					} break; 
+		case 0x34:	switch(field1){
+						case 0x00:	printf("LDAR ");			// LDAR Rd, address TODO
+									findRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("LDA ");				// LDA Rd, Rs(#disp)
+									findRegister(field2);
+									printf(", ");
+									findRegister(field1);
+									printf("(#%04x)", code[1]);
+									opwords = 2;
+									break;
+					} break;
+		case 0x35:	switch(field1){
+						case 0x00:	printf("LDRL ");			//LDRL RRd, address TODO
+									findLongRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("LDL ");				//LDL RRd, Rs(#disp)
+									findLongRegister(field2);
+									printf(", ");
+									findLongRegister(field1);
+									printf("(#%04x)");
+					} break;
+		case 0x36:	printf("Reserved"); break;
+		case 0x37:	switch(field1){
+						case 0x00:	printf("LDRL %04x, ", code[1]);	//LDRL address, RRs TODO
+									findLongRegister(field2);
+									opwords = 2;
+									break;
+						default:	printf("LDL ");				//LDL Rd(#disp), RRs
+									findLongRegister(field1);
+									printf("(#%04x), ", code[1]);
+									findLongRegister(field2);
+									opwords = 2;
+									break;
+					} break;
+		case 0x38:	printf("Reserved"); break;
+		case 0x39:	switch(field2){
+						case 0x00:	printf("LDPS @");			//LDPS @Rs TODO
+									findRegister(field1);
+									break;
+						default:	printf("Reserved");
+									break;
+					} break;
+		case 0x3a:	printf("TODO: Hardware Instructions"); break;
+		case 0x3b:	printf("TODO: Hardware Instructions"); break;
+		case 0x3c:	printf("INB ");								//INB Rbd, @Rs
+					findByteRegister(field2);
+					printf(", @");
+					findByteRegister(field1);
+					break;
+		case 0x3d: 	printf("IN ");								//IN Rd, @Rs
+					findRegister(field2);
+					printf(", @");
+					findRegister(field1);
+					break;
+		case 0x3e:	printf("OUTB @");							//OUTB @Rd, Rbs
+					findByteRegister(field1);
+					printf(", ");
+					findByteRegister(field2);
+					break;
+		case 0x3f:	printf("OUT @");
+					findRegister(field1);
+					printf(", ");
+					findRegister(field2);
+					break;
+
+		case 0x40:	switch(field1){
+						case 0x00:	printf("ADDB ");			//ADDB Rbd, address
+									findByteRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("ADDB ");			//ADDB Rbd, addr(Rs)
+									findByteRegister(field2);
+									printf(", %04x(", code[1]);
+									findByteRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x41:	switch(field1){
+						case 0x00:	printf("ADD ");				//ADD Rd, address
+									findRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("ADD ");				//ADD Rd, addr(Rs)
+									findRegister(field2);
+									printf(", %04x(", code[1]);
+									findRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x42:	switch(field1){
+						case 0x00:	printf("SUBB ");			//SUBB Rbd, address
+									findByteRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("SUBB ");			//SUBB Rbd, addr(Rs)
+									findByteRegister(field2);
+									printf(", %04x(", code[1]);
+									findByteRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x43:	switch(field1){
+						case 0x00:	printf("SUB ");				//SUB Rd, address
+									findRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("SUB ");				//SUB Rd, addr(Rs)
+									findRegister(field2);
+									printf(", %04x(", code[1]);
+									findRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x44:	switch(field1){
+						case 0x00:	printf("ORB ");				//ORB Rbd, address
+									findByteRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("ORB ");				//ORB Rbd, addr(Rs)
+									findByteRegister(field2);
+									printf(", %04x(", code[1]);
+									findByteRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;			
+					} break;
+		case 0x45:	switch(field1){
+						case 0x00:	printf("OR ");				//OR Rd, address
+									findRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("OR ");				//OR Rd, addr(Rs)
+									findRegister(field2);
+									printf(", %04x(");
+									findRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x46:	switch(field1){
+						case 0x00:	printf("ANDB ");			//ANDB Rbd, address
+									findByteRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("ANDB ");			//ANDB Rbd, addr(Rs)
+									findByteRegister(field2);
+									printf(", %04x(", code[1]);
+									findByteRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x47:	switch(field1){
+						case 0x00:	printf("AND ");				//AND Rd, address
+									findRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("AND ");				//AND Rd, addr(Rs)
+									findRegister(field2);
+									printf(", %04x(", code[1]);
+									findRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x48:	switch(field1){
+						case 0x00:	printf("XORB ");			//XORB Rbd, address
+									findByteRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default: 	printf("XORB ");			//XORB Rbd, addr(Rs)
+									findByteRegister(field2);
+									printf(", %04x(", code[1]);
+									findByteRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+
+					} break;
+		case 0x49:	switch(field1){
+						case 0x00:	printf("XOR ");				//XOR Rd, address
+									findRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("XOR ");				//XOR Rd, addr(Rs)
+									findRegister(field2);
+									printf(", %04x(", code[1]);
+									findRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x4a:	switch(field1){
+						case 0x00:	printf("CPB ");				//CPB Rbd, address
+									findByteRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("CPB ");				//CPB Rbd, addr(Rs)
+									findByteRegister(field2);
+									printf(", %04x(", code[1]);
+									findByteRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x4b:	switch(field1){
+						case 0x00:	printf("CP ");				//CP Rd, address
+									findRegister(field2);
+									printf(", %04x", code[1]);
+									opwords = 2;
+									break;
+						default:	printf("CP ");				//CP Rd, addr(Rs)
+									findRegister(field2);
+									printf(", %04x(");
+									findRegister(field1);
+									printf(")");
+									opwords = 2;
+									break;
+					} break;
+		case 0x4c:	switch(field1){
+						case 0x00:	switch(field2){
+										case 0x00:	printf("COMB %04x", code[1]);	//COMB address
+													opwords = 2;
+													break;
+										case 0x01:	printf("CPB %04x, #%04x", code[1], code[2]);	//CPB address, #data
+													opwords = 3;
+													break;
+										case 0x02:	printf("NEGB %04x", code[1]);	//NEGB address
+													opwords = 2;
+													break;
+										case 0x04:	printf("TESTB %04x", code[1]);	//TESTB address
+													opwords = 2;
+													break;
+										case 0x05:	printf("LDB %04x");				//TODO
+													break;
+										case 0x06:	printf("TSETB %04x", code[1]);	//TSETB address
+													opwords = 2;
+													break;
+										case 0x08:	printf("CLRB %04x", code[1]);	//CLRB address
+													opwords = 2;
+													break;
+										default:	printf("Incorrect State!"); break;
+									} break;
+						default:	switch(field2){
+										case 0x00:	printf("COMB %04x(");			//COMB addr(Rd)
+													findByteRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+										case 0x01:	printf("CPB (%04x)", code[1]);	//CPB (addr)Rd, #data
+													findByteRegister(field1);
+													printf(", #%04x", code[2]);
+													opwords = 3;
+													break;
+										case 0x02:	printf("NEGB %04x(", code[1]);	//NEGB addr(Rd)
+													findByteRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+										case 0x04:	printf("TESTB %04x(", code[1]);	//TESTB addr(Rd)
+													findByteRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+										case 0x05:	printf("LDB %04x(",code[1]);	//TODO
+													findByteRegister(field1);
+													printf("), TODO");
+													opwords = 3;
+													break;
+										case 0x06:	printf("TSETB %04x(", code[1]);	//TSETB addr(Rd)
+													findByteRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+										case 0x08:	printf("CLRB %04x(", code[1]);	//CLRB addr(Rd)
+													findByteRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+										default:	printf("Incorrect State!"); break;
+									} break;
+					} break;
+		case 0x5d:	switch(field1){
+						case 0x00:	printf("LDL %04x, ", code[1]); //LDL address, RRs 
+									findLongRegister(field2);
+									opwords = 2;
+									break;
+						default:	printf("LDL %04x(", code[1]); //LDL addr(Rd), RRs
+									findLongRegister(field1);
+									printf("), ");
+									findLongRegister(field2);
+									opwords = 2;
+									break;
+
+					} break;
+		case 0x6e:	switch(field1){
+						case 0x00:	printf("LDB %04x, ", code[1]); //LDB address, Rbs
+									findByteRegister(field2);
+									opwords = 2;
+									break;
+						default:	printf("LDB %04x(", code[1]); //LDB addr(Rd), Rbs
+									findByteRegister(field1);
+									printf("), ");
+									findByteRegister(field2);
+									opwords = 2;
+									break;
+					} break;
+		case 0x6f:	switch(field1){
+						case 0x00:	printf("LD %04x, ", code[1]);//LD address, Rs
+									findRegister(field2);
+									opwords = 2;
+									break;
+						default:	printf("LD %04x(", code[1]);//LD addr(Rd), Rs
+									findRegister(field1);
+									printf("), ");
+									findRegister(field2);
+									opwords = 2;
+									break;
+					} break;
 		default: printf("What the fuck happened"); break;
 	}
 
