@@ -37,7 +37,7 @@ typedef	struct State8002{
 	uint16_t	R13;
 	uint16_t 	R14;
 	uint16_t 	sp;	// Register 15 is the stack pointer
-	uint16_t		pc; // Program counter
+	uint16_t	pc; // Program counter
 	uint8_t 	*memory; // 64k memory space the Z8002 does not use segmented mode
 	struct ConditionCodes* cc;
 } State8002;
@@ -1088,6 +1088,183 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 														default:	printf("Incorrect State!"); break;
 													} break;
 									} break;
+						case 0x4d:	switch(field1){
+										case 0x00:	switch(field2){
+														default: printf("TODO");
+													} break;
+										default:	switch(field2){
+														default: printf("TODO");
+													} break;
+									} break;
+						case 0x4e:	printf("NOP");
+									break;
+						case 0x4f:	printf("TODO");
+									break;
+						case 0x50:	switch(field1){
+										case 0x00:	printf("CPL ");					//CPL RRd, address
+													findLongRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("CPL ");					//CPL RRd, addr(Rs)
+													findLongRegister(field2);
+													printf(", %04x(", code[1]);
+													findLongRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x51:	switch(field2){
+										case 0x00:	printf("PUSHL @");				//PUSHL @Rd, address
+													findLongRegister(field1);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("PUSHL @");				//PUSHL @Rd, addr(Rs)
+													findLongRegister(field1);
+													printf(", %04x(", code[1]);
+													findLongRegister(field2);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;	
+						case 0x52:	switch(field1){
+										case 0x00:	printf("SUBL ");				//SUBL RRd, address
+													findLongRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("SUBL ");				//SUBL RRd, addr(Rs)
+													findLongRegister(field2);
+													printf(", %04x(",code[1]);
+													findLongRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x53:	switch(field2){
+										case 0x00:	printf("PUSH @");				//PUSH @Rd, address
+													findRegister(field1);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("PUSH @");				//PUSH @Rd, addr(Rs)
+													findRegister(field1);
+													printf(", %04x(", code[1]);
+													findRegister(field2);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;	 
+						case 0x54:	switch(field1){
+										case 0x00:	printf("LDL ");					//LDL RRd, address
+													findLongRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("LDL ");					//LDL RRd, addr(Rs)
+													findLongRegister(field2);
+													printf(", %04x(", code[1]);
+													findLongRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x55:	switch(field2){
+										case 0x00:	printf("POPL %04x, @", code[1]);//POPL address, @Rs
+													findLongRegister(field1);
+													opwords = 2;
+													break;
+										default:	printf("POPL %04x(", code[1]);	//POPL addr(Rd), @Rs
+													findLongRegister(field2);
+													printf("), @");
+													findLongRegister(field1);
+													opwords = 2;
+													break;
+									} break;
+						case 0x56:	switch(field1){
+										case 0x00:	printf("ADDL ");				//ADDL RRd, address
+													findLongRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("ADDL ");				//ADDL RRd, addr(Rs)
+													findLongRegister(field2);
+													printf(", %04x(", code[1]);
+													findLongRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x57:	switch(field2){
+										case 0x00:	printf("POP %04x, @", code[1]);	//POP address, @Rs
+													findRegister(field1);
+													opwords = 2;
+													break;
+										default:	printf("POP %04x(", code[1]);	//POP addr(Rd), @Rs
+													findRegister(field2);
+													printf("), @");
+													findRegister(field1);
+													opwords = 2;
+													break;
+									} break;
+						case 0x58:	switch(field1){
+										case 0x00:	printf("MULTL ");				//MULTL RQd, address
+													findQuadRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("MULTL ");				//MULTL RQd, addr(Rs)
+													findQuadRegister(field2);
+													printf(", %04x(", code[1]);
+													findQuadRegister(field1);
+													printf(")");
+													break;
+									} break;
+						case 0x59:	switch(field1){
+										case 0x00:	printf("MULT ");				//MULT RRd, address
+													findLongRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("MULT ");				//MULT RRd, addr(Rs)
+													findLongRegister(field2);
+													printf(", %04x(", code[1]);
+													findLongRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x5a:	switch(field1){
+										case 0x00:	printf("DIVL ");				//DIVL RQd, address
+													findQuadRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("DIVL ");				//DIVL RQd, addr(Rs)
+													findQuadRegister(field2);
+													printf(", %04x(", code[1]);
+													findQuadRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x5b:	switch(field1){
+										case 0x00:	printf("DIV ");					//DIV RRd, address
+													findLongRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("DIV ");					//DIV RRd, addr(Rs)
+													findLongRegister(field2);
+													printf(", %04x(");
+													findLongRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x5c:	printf("TODO");
+									break;
 						case 0x5d:	switch(field1){
 										case 0x00:	printf("LDL %04x, ", code[1]); //LDL address, RRs
 													findLongRegister(field2);
@@ -1100,6 +1277,182 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 													opwords = 2;
 													break;
 
+									} break;
+						case 0x5e:	switch(field1){
+										case 0x00:	printf("JP %02x, %04x", field2, code[1]);	//JP cc, address
+													opwords = 2;
+													break;
+										default:	printf("JP %02x, %04x(", field2, code[1]);	//JP cc, address(Rd)
+													findRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;		
+						case 0x5f:	switch(field1){
+										case 0x00:	printf("CALL %04x", code[1]);		//CALL address
+													opwords = 2;
+													break;
+										default:	printf("CALL %04x(", code[1]);		//CALL address(Rd)
+													findRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;	
+						case 0x60:	switch(field1){
+										case 0x00:	printf("LDB ");						//LDB Rbd, address
+													findregRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("LDB ");						//LDB Rbd, addr(Rs)
+													findregRegister(field2);
+													printf(", %04x(", code[1]);
+													findregRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x61:	switch(field1){
+										case 0x00:	printf("LD ");						//LD Rd, address
+													findRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("LD ");						//LD Rd, addr(Rs)
+													findRegister(field2);
+													printf(", %04x(", code[1]);
+													findRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x62:	switch(field1){
+										case 0x00:	printf("RESB %04x, #%02x", code[1], field2);	//RESB address, #b
+													opwords = 2;
+													break;
+										default:	printf("RESB %04x(", code[1]);					//RESB addr(Rd), #b
+													findregRegister(field1);
+													printf("), #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x63:	switch(field1){
+										case 0x00:	printf("RES %04x, #%02x", code[1], field2);		//RES address, #b
+													opwords = 2;
+													break;
+										default:	printf("RES %04x(", code[1]);					//RES addr(Rd), #b
+													findRegister(field1);
+													printf("), #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x64:	switch(field1){
+										case 0x00:	printf("SETB %04x, #%02x", code[1], field2);	//SETB address, #b
+													opwords = 2;
+													break;
+										default:	printf("SETB %04x(", code[1]);					//SETB addr(Rd), #b
+													findregRegister(field1);
+													printf("), #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x65:	switch(field1){
+										case 0x00:	printf("SET %04x, #%02x", code[1], field2);		//SET address, #b
+													opwords = 2;
+													break;
+										default:	printf("SET %04x(", code[1]);					//SET addr(Rd), #b
+													findRegister(field1);
+													printf("), #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x66:	switch(field1){
+										case 0x00:	printf("BITB %04x, #%02x", code[1], field2);	//BITB address, #b
+													opwords = 2;
+													break;
+										default:	printf("BITB %04x(", code[1]);					//BITB addr(Rd), #b
+													findregRegister(field1);
+													printf("), #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x67:	switch(field1){
+										case 0x00:	printf("BIT %04x, #%02x", code[1], field2);		//BIT address, #b
+													opwords = 2;
+													break;
+										default:	printf("BIT %04x(", code[1]);					//BIT addr(Rd), #b
+													findRegister(field1);
+													printf("), #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x68:	switch(field1){
+										case 0x00:	printf("INCB %04x, #%02x", code[1], field2);	//INCB address, #n
+													opwords = 2;
+													break;
+										default:	printf("INCB %04x(", code[1]);					//INCB addr(Rd), #n
+													findregRegister(field1);
+													printf("), #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x69:	switch(field1){
+										case 0x00:	printf("INC %04x, #%02x", code[1], field2);		//INC address, #n
+													opwords = 2;
+													break;
+										default:	printf("INC %04x(", code[1]);					//INC addr(Rd), #n
+													findRegister(field1);
+													printf("), #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x6a:	switch(field1){
+										case 0x00:	printf("DECB %04x, #%02x", code[1], field2);	//DECB address, #n
+													opwords = 2;
+													break;
+										default:	printf("DECB %04x(", code[1]);					//DECB addr(Rd), #n
+													findregRegister(field1);
+													printf(", #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x6b:	switch(field1){
+										case 0x00:	printf("DEC %04x, #%02x", code[1], field2);		//DEC address, #n
+													opwords = 2;
+													break;
+										default:	printf("DEC %04x(", code[1]);					//DEC addr(Rd), #n
+													findRegister(field1);
+													printf("), #%02x", field2);
+													opwords = 2;
+													break;
+									} break;
+						case 0x6c:	switch(field1){
+										case 0x00:	printf("EXB ");									//EXB Rbd, address
+													findregRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("EXB ");									//EXB Rbd, addr(Rs)
+													findregRegister(field2);
+													printf(", %04x(", code[1]);
+													findregRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
+									} break;
+						case 0x6d:	switch(field1){
+										case 0x00:	printf("EX ");									//EX Rd, address
+													findRegister(field2);
+													printf(", %04x", code[1]);
+													opwords = 2;
+													break;
+										default:	printf("EX ");									//EX Rd, addr(Rs)
+													findRegister(field2);
+													printf(", %04x(", code[1]);
+													findRegister(field1);
+													printf(")");
+													opwords = 2;
+													break;
 									} break;
 						case 0x6e:	switch(field1){
 										case 0x00:	printf("LDB %04x, ", code[1]); //LDB address, Rbs
@@ -1125,6 +1478,39 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 													opwords = 2;
 													break;
 									} break;
+						case 0x70:	printf("TODO");							//LDB Rbd, Rs(Rx)
+						case 0x71:	printf("TODO");							//LD Rd, Rs(Rx)
+						case 0x72:	printf("TODO");							//LDB Rd(Rx), Rbs
+						case 0x73:	printf("TODO");							//LD Rd(Rx), Rs
+						case 0x74:	printf("TODO");							//LDA Rd, Rs(Rx)
+						case 0x75:	printf("TODO");							//LDL RRd, Rs(Rx)
+						case 0x76:	printf("TODO");							//LDA Rd, address
+						case 0x77:	printf("TODO");							//LDL Rd(Rx), RRs
+						case 0x78:	printf("RESERVED");						
+						case 0x79:	switch(field2){
+										case 0x00:	switch(field1){
+														case 0x00:	printf("LDPS %04x", code[1]);	//LDPS address
+																	opwords = 2;
+																	break;
+														default:	printf("LDPS %04x(", code[1]);	//LDPS addr(Rs)
+																	findRegister(field1);
+																	printf(")");
+																	opwords = 2;
+																	break;
+													} break;
+										default:	printf("RESERVED");
+									} break;
+						case 0x7a:	switch(lowerHalf){
+										case 0x00:	printf("HALT");			//HALT
+													break;
+										default:	printf("TODO");
+													break;
+									} break;	
+						case 0x7b:	printf("TODO");		
+						case 0x7c:	printf("TODO");			
+						case 0x7d:	printf("TODO");	
+						case 0x7e:	printf("NOP");
+						case 0x7f:	printf("SC #%04x", lowerHalf);			//SC #src
 						case 0x81:	printf("ADD ");							//ADD Rd, Rs
 									findRegister(field2);
 									printf(", ");
@@ -1166,7 +1552,7 @@ int Emulate8002(State8002* state){
 	uint64_t *memptr64 = state->memory;
 	state->memory[1] = fix_8(0x01);
 	state->memory[3] = fix_8(0x01);
-	state->memory[5] = fix_8(0x05);
+	state->memory[5] = fix_8(0x04);
 
 
 	//printf("point to memory plus 1 is :%x\n",(*(memptr8 + 2) ));
@@ -1407,7 +1793,7 @@ int main (int argc, char**argv){
 	State8002* state = Init8002();
 
 	ReadFileIntoMemoryAt(state, "jr.t", 255*8);
-
+	//ReadFileIntoMemoryAt(state, "jr.t", 2);
 	while (done == 0){
 		done = Emulate8002(state);
 	}
