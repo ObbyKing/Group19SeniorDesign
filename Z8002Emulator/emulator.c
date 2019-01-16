@@ -1699,6 +1699,132 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 									} break;
 						case 0x9f:	printf("NOP");							//NO INSTRUCTION
 									break;
+						case 0xa0:	printf("LDB ");							//LDB Rbd, Rbs
+									findregRegister(field2);
+									printf(", ");
+									findregRegister(field1);
+									break;
+						case 0xa1:	printf("LD ");							//LD Rd, Rs
+									findRegister(field2);
+									printf(", ");
+									findRegister(field1);
+									break;
+						case 0xa2:	printf("RESB ");						//RESB Rbd, #b
+									findregRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xa3:	printf("RES ");							//RES Rd, #b
+									findRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xa4:	printf("SETB ");						//SETB Rbd, #b
+									findregRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xa5:	printf("SET ");							//SET Rd, #b
+									findRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xa6:	printf("BITB ");						//BITB Rbd, #b
+									findregRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xa7:	printf("BIT ");							//BIT Rd, #b
+									findRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xa8:	printf("INCB ");						//INCB Rbd, #n
+									findregRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xa9:	printf("INC ");							//INC Rd, #n
+									findRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xaa:	printf("DECB ");						//DECB Rbd, #n
+									findregRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xab:	printf("DEC ");							//DEC Rd, #n
+									findRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xac:	printf("EXB ");							//EXB Rbd, Rbs
+									findregRegister(field2);
+									printf(", ");
+									findregRegister(field1);
+									break;
+						case 0xad:	printf("EX ");							//EX Rd, Rs
+									findRegister(field2);
+									printf(", ");
+									findRegister(field1);
+									break;
+						case 0xae:	printf("TCCB %02x, ", field2);			//TCCB cc, Rbd
+									findregRegister(field1);
+									break;
+						case 0xaf:	printf("TCC %02x, ", field2);			//TCC cc, Rd
+									findRegister(field1);
+									break;
+						case 0xb0:	printf("DAB ");							//DAB Rbd
+									findregRegister(field1);
+									break;
+						case 0xb1:	switch(field2){
+										case 0x00:	printf("EXTSB ");		//EXTSB Rd
+													findRegister(field1);
+													break;
+										case 0x07:	printf("EXTS ");		//EXTS RRd
+													findLongRegister(field1);
+													break;
+										case 0x0a:	printf("EXTSL ");		//EXTSL RQd
+													findQuadRegister(field1);
+													break;
+										default:	printf("How did you get here?");
+													break;
+									} break;
+						case 0xb2:	switch(field2){
+										case 0x00:	printf("RLB ");			//RLB Rbd, #1
+													findregRegister(field1);
+													printf(", #1");
+													break;
+										case 0x01:	printf("TODO");			//SLLB Rbd, #b & SRLB Rbd, #b
+										case 0x02:	printf("RLB ");			//RLB Rbd, #2
+													findregRegister(field1);
+													printF(", #1");
+													break;
+										case 0x03:	printf("SDLB ");		//SDLB Rbd, Rs
+													findregRegister(field1);
+													printf(", ");
+													findRegister(code[1]>>8);	//TODO
+													opwords = 2;
+													break;
+										case 0x04:	printf("RRB ");			//RRB Rbd, #1
+													findregRegister(field1);
+													printf(", #1");
+													break;
+										case 0x05:	printf("RESERVED");
+													break;
+										case 0x06:	printf("RRB ");			//RRB Rbd, #2
+													findregRegister(field1);
+													printf(", #2");
+													break;
+										case 0x07:	printf("RESERVED");
+													break;
+										case 0x08:	printf("RLCB ");		//RLCB Rbd, #1
+													findregRegister(field1);
+													printf(", #1");
+													break;
+										case 0x09:
+										case 0x0a:
+										case 0x0b:
+										case 0x0c:
+										case 0x0d:	printf("RESERVED");
+													break;
+										case 0x0e:
+										case 0x0f:	printf("RESERVED");
+													break;
+										default:	printf("How did you get here?");
+													break;
+									}
 						default: printf("%02x not implemented in dissasembler", upperHalf); break;
 					} break;
 	}
