@@ -1813,18 +1813,112 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 													findregRegister(field1);
 													printf(", #1");
 													break;
-										case 0x09:
-										case 0x0a:
-										case 0x0b:
-										case 0x0c:
+										case 0x09:	printf("SLAB ");		//SLAB Rbd, #b
+													findregRegister(field1);
+													printF(", #b");			//TODO
+													opwords = 2;
+													break;
+										case 0x0a:	printf("RLCB ");		//RLCB Rbd, #2
+													findregRegister(field1);
+													printf(", #2");
+													break;
+										case 0x0b:	printf("SDAB ");		//SDAB Rbd, Rs
+													findregRegister(field1);
+													printf(", ");
+													findRegister(code[1]>>8);	//TODO
+													break;
+										case 0x0c:	printf("RRCB ");		//RRCB Rbd, #1
+													findregRegister(field1);
+													printf(", #1");
+													break;
 										case 0x0d:	printf("RESERVED");
 													break;
-										case 0x0e:
+										case 0x0e:	printf("RRCB ");		//RRCB Rbd, #2
+													findregRegister(field1);
+													printf(", #2");
+													break;
 										case 0x0f:	printf("RESERVED");
 													break;
 										default:	printf("How did you get here?");
 													break;
-									}
+									} break;
+						case 0xb3:	switch(field2){
+										case 0x00:	printf("RL ");			//RL Rd, #1
+													findRegister(field1);
+													printf(", #1");
+													break;
+										case 0x01:	printf("SLA ");			//SLA Rd, #b
+													findRegister(field1);
+													printf(", #%04x", code[1]);
+													break;
+										case 0x02:	printf("RL ");			//RL Rd, #2
+													findRegister(field1);
+													printf(", #2");
+													break;
+										case 0x03:	printf("SDL ");			//SDL Rd, Rs
+													findRegister(field1);
+													printf(", ");
+													findRegister(code[1]>>8);	//TODO
+													opwords = 2;
+													break;
+										case 0x04:	printf("RR ");			//RR Rd, #1
+													findRegister(field1);
+													printf(", #1");
+													break;
+										case 0x05:	printf("SLLL ");		//SLLL RRd, #b
+													findLongRegister(field1);
+													printf(", #%04x", code[1]);
+													opwords = 2;
+													break;
+										case 0x06:	printf("RR ");			//RR Rd, #2
+													findRegister(field1);
+													printf(", #2");
+													break;
+										case 0x07:	printf("SDLL ");		//SDLL RRd, Rs
+													findLongRegister(field1);
+													printf(", ");
+													findRegister(code[1]>>8); //TODO
+													opwords = 2;
+													break;
+										case 0x08:	printf("RLC ");			//RLC Rd, #1
+													findRegister(field1);
+													printf(", #1");
+													break;
+										case 0x09:	printf("SLA ");			//SLA Rd, #b
+													findRegister(field1);
+													printf(", #%04x", code[1]);
+													opwords = 2;
+													break;
+										case 0x0a:	printf("RLC");			//RLC Rd, #2
+													findRegister(field1);
+													printf(", #2");
+													break;
+										case 0x0b:	printf("SDA ");			//SDA Rd, Rs
+													findRegister(field1);
+													printf(", ");
+													findRegister(code[1]>>8);
+													opwords = 2;
+													break;
+										case 0x0c:	printf("RRC ");			//RRC Rd, #1
+													findRegister(field1);
+													printf(", #1");
+													break;
+										case 0x0d:	printf("SRAL ");		//SRAL RRd, #b
+													findLongRegister(field1);
+													printf(", #%04x", code[1]);
+													opwords = 2;
+													break;
+										case 0x0e:	printf("RRC ");			//RRC Rd, #2
+													findRegister(field1);
+													printf(", #2");
+													break;
+										case 0x0f:	printf("SDAL ");		//SDAL RRd, Rs
+													findLongRegister(field1);
+													printf(", ");
+													findRegister(code[1]>>8);
+													opwords = 2;
+													break;
+									} break;
 						default: printf("%02x not implemented in dissasembler", upperHalf); break;
 					} break;
 	}
