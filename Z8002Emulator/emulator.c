@@ -1919,6 +1919,75 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 													opwords = 2;
 													break;
 									} break;
+						case 0xb4:	printf("ADCB ");
+									findregRegister(field2);
+									printf(", ");
+									findregRegister(field1);
+									break;
+						case 0xb5:	printf("ADC ");
+									findRegister(field2);
+									printf(", ");
+									findRegister(field1);
+									break;
+						case 0xb6:	printf("SBCB ");
+									findregRegister(field2);
+									printf(", ");
+									findregRegister(field1);
+									break;
+						case 0xb7:	printf("SBC ");
+									findRegister(field2);
+									printf(", ");
+									findRegister(field1);
+									break;
+						case 0xb8:	switch(field2){
+										case 0x00:	printf("TRIB @");			//TRIB @Rd, @Rs, r
+													findRegister(field1);
+													printf(", @");
+													findRegister(code[1]>>4);
+													printf(", ");
+													findRegister(code[1]>>8);
+													opwords = 2;				//TODO
+													break;
+										case 0x01:	printf("RESERVED");
+													break;
+										case 0x02:
+										case 0x03:	printf("RESERVED");
+													break;
+										case 0x04:
+										case 0x05:	printf("RESERVED");
+													break;
+										case 0x06:
+										case 0x07:	printf("RESERVED");
+													break;
+										case 0x08:
+										case 0x09:	printf("RESERVED");
+													break;
+										case 0x0a:
+										case 0x0b:	printf("RESERVED");
+													break;
+										case 0x0c:
+										case 0x0d:	printf("RESERVED");
+													break;
+										case 0x0e:
+										case 0x0f:	printf("RESERVED");
+													break;
+										default:	printf("How did you get here?");
+									} break;
+						case 0xb9:	printf("RESERVED");
+									break;
+						case 0xba:	switch(field2){
+										case 0x00:
+										case 0x01:
+										case 0x02:
+										case 0x04:
+										case 0x06:
+										case 0x08:
+										case 0x09:
+										case 0x0a:
+										case 0x0c:
+										case 0x0e:
+										default:
+									} break;
 						default: printf("%02x not implemented in dissasembler", upperHalf); break;
 					} break;
 	}
