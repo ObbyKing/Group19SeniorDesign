@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <arpa/inet.h>
-//#include <winsock2.h>
+//#include <arpa/inet.h>
+#include <winsock2.h>
 
 
 typedef int bool;
@@ -1944,55 +1944,283 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									printf(", ");
 									findRegister(field1);
 									break;
+
 						case 0xb8:	switch(field2){
-										case 0x00:	printf("TRIB @");			//TRIB @Rd, @Rs, r
+										case(0x8):	printf("TRDB ");		//TRDB @RD, @RS, r
 													findRegister(field1);
-													printf(", @");
-													findRegister(code[1]>>4);
 													printf(", ");
-													findRegister(code[1]>>8);
-													opwords = 2;				//TODO
+													printf("@%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
 													break;
-										case 0x01:	printf("RESERVED");
+
+										case(0xc):	printf("TRRDB ");		//TRRDB @Rd, @Rs, r
+													findRegister(field1);
+													printf(", ");
+													printf("@%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
 													break;
-										case 0x02:
-										case 0x03:	printf("RESERVED");
+
+										case(0x0):	printf("TRIB ");		//TRIB @Rd, @Rs, r
+													findRegister(field1);
+													printf(", ");
+													printf("@%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
 													break;
-										case 0x04:
-										case 0x05:	printf("RESERVED");
+
+										case(0x4):	printf("TRIRB ");		//TRIRB @Rd, @Rs, r
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
 													break;
-										case 0x06:
-										case 0x07:	printf("RESERVED");
+
+										case(0xa):	printf("TRTDB ");		//TRTDB @Rs1, @Rs2, r
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
 													break;
-										case 0x08:
-										case 0x09:	printf("RESERVED");
+
+										case(0xe):	printf("TRTDRB ");		//TRTDRB @Rs1, @Rs2, r
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
 													break;
-										case 0x0a:
-										case 0x0b:	printf("RESERVED");
+
+										case(0x2):	printf("TRTIB ");		//TRTIB @Rs1, @Rs2, r
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
 													break;
-										case 0x0c:
-										case 0x0d:	printf("RESERVED");
+										
+
+										case(0x6):	printf("TRTIRB ");		//TRTIRB @Rs1, @Rs2, r
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
 													break;
-										case 0x0e:
-										case 0x0f:	printf("RESERVED");
+
+										default: 	printf("This is a reserved instruction // Comes from same op code as TRDB");
 													break;
-										default:	printf("How did you get here?");
+
 									} break;
-						case 0xb9:	printf("RESERVED");
-									break;
+
+						case 0xb9:	printf("Reserved Instruction 0xb9"); break;
 						case 0xba:	switch(field2){
-										case 0x00: break;
-										case 0x01: break;
-										case 0x02: break;
-										case 0x04: break;
-										case 0x06: break;
-										case 0x08: break;
-										case 0x09: break;
-										case 0x0a: break;
-										case 0x0c: break;
-										case 0x0e: break;
-										default: break;
+										case(0x8):	printf("CPDB ");		//CPDB Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0xc):	printf("CPDRB ");		//CPDRB Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x0):	printf("CPIB ");		//CPIB Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x4):	printf("CPIRB ");		//CPIRB RD, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0xa):	printf("CPSDB ");		//@Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0xe):	printf("CPSDRB ");		//CPSDRB @Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x2):	printf("CPSIB ");		//CPSIB @Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x6):	printf("CPSIRB ");		//CPSIRB @Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x9):	printf("LDDB ");		//LDDB @Rd, @Rs, r
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													break;
+
+										case(0x1):	printf("LDIRB ");		//LDIRB @Rd, @Rs, r
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													break;
+
+										default: 	printf("NOP, location 0xba");
+												 	break;
 									} break;
+
+						case 0xbb:  switch(field2){
+
+										case(0x8):	printf("CPD ");		//CPD Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0xc):	printf("CPDR ");		//CPDR Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x0):	printf("CPI ");		//CPI Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x4):	printf("CPIR ");		//CPIR Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0xa):	printf("CPSD ");		//CPSD Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0xe):	printf("CPSDR ");		//CPSDR @Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("@%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x2):	printf("CPSI ");		//CPSI @Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x6):	printf("CPSIR ");		//CPSIR @Rd, @Rs, r, cc
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													printf(", ");
+													printf("%04x", (code[1]) & 0x000F);
+													break;
+
+										case(0x9):	printf("LDD ");		//LDD @Rd, @Rs, r
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													break;
+
+										case(0x1):	printf("LDI ");		//LDI @Rd, @Rs, r
+													findRegister(field1);
+													printf(", ");
+													printf("%04x", (code[1]>>4) & 0x000F);
+													printf(", ");
+													printf("%04x", code[1]>>8);
+													break;
+
+										default:	printf("NOP from op code 0xbb");
+													break;
+
+									} break;
+
 						default: printf("%02x not implemented in dissasembler", upperHalf); break;
 					} break;
 	}
