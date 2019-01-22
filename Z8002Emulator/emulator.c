@@ -237,7 +237,7 @@ uint32_t* returnLongRegisterPointer(uint8_t regToFind, State8002* state){
 	return regPointer;
 }
 
-int Disassemble8002(uint8_t *codebuffer, int pc){
+int Disassemble8002(uint16_t *codebuffer, int pc){
 	uint16_t* code = &codebuffer[pc];
 	uint8_t upperHalf = code[0] >> 8;
 	uint8_t lowerHalf = code[0];
@@ -249,8 +249,13 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 	uint8_t upperFour = code[0] >> 12;
 	uint8_t secondNibble = upperHalf & 0x0F;
 
-	// printf("%02x \n", upperHalf);
-	// printf("%02x \n", lowerHalf);
+	printf("%04x\n", code[0]);
+	printf("%04x\n", code[1]);
+	printf("%04x\n", code[2]);
+	printf("%04x\n", code[3]);
+	printf("%04x\n", code[4]);
+	 // printf("%02x \n", upperHalf);
+	 // printf("%02x \n", lowerHalf);
 	// printf("%01x \n", field1);
 	// printf("%01x \n", field2);
 	// printf("%02x \n", opcode);
@@ -258,7 +263,6 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 
 	int opwords = 1;
 
-	//printf("OPcode: %x, PC: %x\n",upperHalf,pc );
 	printf("%04x ", pc);
 	switch (upperTwo){
 		case 0x3:	switch(upperFour){
@@ -266,6 +270,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 									uint16_t addr = pc + (lowerHalf * 2);
 									printf("%02x\t", addr);
 									break;
+						default:	printf("I'm here now!");
 					} break;
 		default:	switch (upperHalf){
 						case 0x00: switch(field1){ // ADDB
@@ -603,7 +608,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 									findLongRegister(field2);
 									break;
 						case 0x1e:	printf("JP ");								//JP cc, @Rd
-									printf(field2);
+									printf("%02x", field2);
 									printf(", @");
 									findRegister(field1);
 									break;
@@ -810,7 +815,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 													findLongRegister(field2);
 													printf(", ");
 													findLongRegister(field1);
-													printf("(#%04x)");
+													printf("(#%04x)", code[1]);
 									} break;
 						case 0x36:	printf("Reserved"); break;
 						case 0x37:	switch(field1){
@@ -934,7 +939,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 													break;
 										default:	printf("OR ");				//OR Rd, addr(Rs)
 													findRegister(field2);
-													printf(", %04x(");
+													printf(", %04x(", code[1]);
 													findRegister(field1);
 													printf(")");
 													opwords = 2;
@@ -1019,7 +1024,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 													break;
 										default:	printf("CP ");				//CP Rd, addr(Rs)
 													findRegister(field2);
-													printf(", %04x(");
+													printf(", %04x(", code[1]);
 													findRegister(field1);
 													printf(")");
 													opwords = 2;
@@ -1039,7 +1044,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 														case 0x04:	printf("TESTB %04x", code[1]);	//TESTB address
 																	opwords = 2;
 																	break;
-														case 0x05:	printf("LDB %04x");				//TODO
+														case 0x05:	printf("LDB ");				//TODO
 																	break;
 														case 0x06:	printf("TSETB %04x", code[1]);	//TSETB address
 																	opwords = 2;
@@ -1050,7 +1055,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 														default:	printf("Incorrect State!"); break;
 													} break;
 										default:	switch(field2){
-														case 0x00:	printf("COMB %04x(");			//COMB addr(Rd)
+														case 0x00:	printf("COMB %04x(", code[1]);			//COMB addr(Rd)
 																	findregRegister(field1);
 																	printf(")");
 																	opwords = 2;
@@ -1257,7 +1262,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 													break;
 										default:	printf("DIV ");					//DIV RRd, addr(Rs)
 													findLongRegister(field2);
-													printf(", %04x(");
+													printf(", %04x(", code[1]);
 													findLongRegister(field1);
 													printf(")");
 													opwords = 2;
@@ -1789,7 +1794,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 										case 0x01:	printf("TODO");			//SLLB Rbd, #b & SRLB Rbd, #b
 										case 0x02:	printf("RLB ");			//RLB Rbd, #2
 													findregRegister(field1);
-													printF(", #1");
+													printf(", #1");
 													break;
 										case 0x03:	printf("SDLB ");		//SDLB Rbd, Rs
 													findregRegister(field1);
@@ -1815,7 +1820,7 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 													break;
 										case 0x09:	printf("SLAB ");		//SLAB Rbd, #b
 													findregRegister(field1);
-													printF(", #b");			//TODO
+													printf(", #b");			//TODO
 													opwords = 2;
 													break;
 										case 0x0a:	printf("RLCB ");		//RLCB Rbd, #2
@@ -1976,17 +1981,17 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 						case 0xb9:	printf("RESERVED");
 									break;
 						case 0xba:	switch(field2){
-										case 0x00:
-										case 0x01:
-										case 0x02:
-										case 0x04:
-										case 0x06:
-										case 0x08:
-										case 0x09:
-										case 0x0a:
-										case 0x0c:
-										case 0x0e:
-										default:
+										case 0x00: break;
+										case 0x01: break;
+										case 0x02: break;
+										case 0x04: break;
+										case 0x06: break;
+										case 0x08: break;
+										case 0x09: break;
+										case 0x0a: break;
+										case 0x0c: break;
+										case 0x0e: break;
+										default: break;
 									} break;
 						default: printf("%02x not implemented in dissasembler", upperHalf); break;
 					} break;
@@ -1995,7 +2000,6 @@ int Disassemble8002(uint8_t *codebuffer, int pc){
 }
 
 int Emulate8002(State8002* state){
-
 	uint16_t *opcode = &state->memory[state->pc];
 
 	int done = 0;
@@ -2008,21 +2012,18 @@ int Emulate8002(State8002* state){
 	uint8_t field1 = (opcode[0] >> 4) & (0x0F);
 	uint8_t field2 = opcode[0] & 0x0F;
 
+	printf("%04x\n", opcode[0]);
+	printf("%04x\n", opcode[1]);
+	printf("%04x\n", opcode[2]);
+	printf("%04x\n", opcode[3]);
+	printf("%04x\n", opcode[4]);
+
+	printf("\n");
+
 	Disassemble8002(state->memory, state->pc);
-
-	//state->R0 = 0x1111;
-	//state->R3 = 0x1111;
-	uint8_t  *memptr8  = state->memory;
-	uint16_t *memptr16 = state->memory;
-	uint64_t *memptr64 = state->memory;
-	state->memory[1] = fix_8(0x01);
-	state->memory[3] = fix_8(0x01);
-	state->memory[5] = fix_8(0x04);
-
 
 	//printf("point to memory plus 1 is :%x\n",(*(memptr8 + 2) ));
 	state->pc += 2;
-
 
 	switch(upperTwo){ //address mode/type of instruction
 		case 0b11:{  //special instruction
@@ -2041,12 +2042,11 @@ int Emulate8002(State8002* state){
 
 		default:{ //regular instruction
 			switch(upperHalf){ //opcode
-				case 0b00000000:{ //ADDB,  IM or IR
-
+				case 0x00:{ //ADDB,  IM or IR
 					if(field1 == 0){	//ADDB (IM)
-						state->pc+=2;
 						uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
 						*destinationReg8 = *destinationReg8 + (opcode[1] >> 8); //assuming we only use the top bits
+						state->pc+=2;
 					}
 					else{ //ADDB (IR)
 						uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
@@ -2062,14 +2062,34 @@ int Emulate8002(State8002* state){
 						uint16_t* destinationReg16 = returnByteRegisterPointer(field2, state);
 						*destinationReg16 = fix_16( fix_16(*destinationReg16) + opcode[1] ); //assuming we only use the top bits
 					}
-					else{ //ADDB (IR)
+					else{ //ADD (IR)
 						uint16_t* destinationReg16 = returnByteRegisterPointer(field2, state);
 						uint16_t* sourceReg16 = returnByteRegisterPointer(field1, state);
 						uint16_t* memptr16 = state->memory;
 						uint16_t memData16 = fix_16(*(memptr16 + fix_16(*sourceReg16)));
 						*destinationReg16 = fix_16(fix_16(*destinationReg16) + memData16);
 					}
-				}break;
+				} break;
+				case 0x02:{
+					if(field1 == 0){	// SUBB Rbd, #data
+						uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+						*destinationReg8 = *destinationReg8 - (opcode[1] >> 8); //assuming we only use the upper eight bits
+					} else {			//SUBB Rbd, @Rs
+						uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+						uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
+						uint8_t* memptr8 = state->memory;
+						uint8_t memData8 = *(memptr8 + *sourceReg8);
+						*destinationReg8 = *destinationReg8 - memData8;
+					}
+				} break;
+				case 0x03:{
+					if(field1 == 0){	// SUB Rd, #data
+						uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
+						*destinationReg16 = fix_16( fix_16(*destinationReg16) - opcode[1]);
+					} else {
+						//uint16_t* destinationReg16 = return
+					}
+				} break;
 				case 0b00010110:{//ADDL IM or IR
 					if(field1 == 0){	//ADDB (IM)
 						state->pc += 2 ;
@@ -2180,8 +2200,7 @@ int Emulate8002(State8002* state){
 	}
 
 	printf("\t");
-	printf("R1: %i, R2: %i, R7: %i, R8: %i  ||| OP: %x\n", fix_16(state->R1),fix_16(state->R2),fix_16(state->R7),fix_16(state->R8),upperHalf);
-
+	printf("R1: %i, R2: %i, R7: %i, R8: %i  ||| OP: %x\n",state->R1,state->R2,state->R7,state->R8,upperHalf);
 
 	if(upperFour == 0xFF){
 		return 1;
@@ -2192,7 +2211,6 @@ int Emulate8002(State8002* state){
 
 
 void ReadFileIntoMemoryAt(State8002* state, char* filename, uint32_t offset){
-	state->pc = offset;
 	FILE *f= fopen(filename, "rb");
 	if(f==NULL){
 		printf("error: Couldn't open %s\n", filename);
@@ -2203,13 +2221,13 @@ void ReadFileIntoMemoryAt(State8002* state, char* filename, uint32_t offset){
 	fseek(f, 0L, SEEK_SET);
 
 
-	uint8_t *buffer = malloc(0x10000);
+	uint8_t *buffer = &state->memory[offset];
 	fread(buffer, fsize, 1, f);
 	fclose(f);
 	uint16_t *memptr = &state->memory[offset];
 
 	for(uint16_t i = 0; i < fsize/2; i++){
-		memptr[i] = buffer[i*2+1] + (buffer[i*2] << 8);
+	 	memptr[i] = buffer[i*2+1] + (buffer[i*2] << 8);
 	}
 }
 
@@ -2257,7 +2275,7 @@ int main (int argc, char**argv){
 	int done = 0;
 	State8002* state = Init8002();
 
-	ReadFileIntoMemoryAt(state, "jr.t", 255*8);
+	ReadFileIntoMemoryAt(state, "testFormat.t", 0);
 	//ReadFileIntoMemoryAt(state, "jr.t", 2);
 	while (done == 0){
 		done = Emulate8002(state);
