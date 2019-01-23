@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-//#include <arpa/inet.h>
-#include <winsock2.h>
+#include <arpa/inet.h>
+//#include <winsock2.h>
 
 
 typedef int bool;
@@ -166,22 +166,22 @@ void findQuadRegister(uint8_t regToFind){
 uint8_t* returnByteRegisterPointer(uint8_t regToFind, State8002* state){
 	uint8_t* regPointer;
 	switch(regToFind){
-		case 0x00: regPointer = &state->R0;  break; //Higher
-		case 0x01: regPointer = &state->R1;  break;
-		case 0x02: regPointer = &state->R2;  break;
-		case 0x03: regPointer = &state->R3;  break;
-		case 0x04: regPointer = &state->R4;  break;
-		case 0x05: regPointer = &state->R5;  break;
-		case 0x06: regPointer = &state->R6;  break;
-		case 0x07: regPointer = &state->R7;  break;
-		case 0x08: regPointer = &state->R0 + 1;  break; //Higher
-		case 0x09: regPointer = &state->R1 + 1;  break;
-		case 0x0a: regPointer = &state->R2 + 1;  break;
-		case 0x0b: regPointer = &state->R3 + 1;  break;
-		case 0x0c: regPointer = &state->R4 + 1;  break;
-		case 0x0d: regPointer = &state->R5 + 1;  break;
-		case 0x0e: regPointer = &state->R6 + 1;  break;
-		case 0x0f: regPointer = &state->R7 + 1;  break;
+		case 0x00: regPointer = &state->R0; regPointer += 1;  break; //Higher
+		case 0x01: regPointer = &state->R1; regPointer += 1; break;
+		case 0x02: regPointer = &state->R2; regPointer += 1; break;
+		case 0x03: regPointer = &state->R3; regPointer += 1; break;
+		case 0x04: regPointer = &state->R4; regPointer += 1; break;
+		case 0x05: regPointer = &state->R5; regPointer += 1; break;
+		case 0x06: regPointer = &state->R6; regPointer += 1; break;
+		case 0x07: regPointer = &state->R7; regPointer += 1; break;
+		case 0x08: regPointer = &state->R0;  break; // Lower
+		case 0x09: regPointer = &state->R1;  break;
+		case 0x0a: regPointer = &state->R2;  break;
+		case 0x0b: regPointer = &state->R3;  break;
+		case 0x0c: regPointer = &state->R4;  break;
+		case 0x0d: regPointer = &state->R5;  break;
+		case 0x0e: regPointer = &state->R6;  break;
+		case 0x0f: regPointer = &state->R7;  break;
 		default: printf("WRONG"); return regPointer; break;
 	}
   return regPointer;
@@ -237,8 +237,18 @@ uint32_t* returnLongRegisterPointer(uint8_t regToFind, State8002* state){
 	return regPointer;
 }
 
+void UnimplementedInstruction(State8002* state){
+	//pc will have advanced one, so undo that
+	printf("\tError: Unimplemented instruction\n");
+	state->pc-=2;
+	Disassemble8002(state->memory, state->pc);
+	printf("\n");
+	exit(1);
+}
+
 int Disassemble8002(uint16_t *codebuffer, int pc){
-	uint16_t* code = &codebuffer[pc];
+	uint16_t *code = &codebuffer[pc/2];
+
 	uint8_t upperHalf = code[0] >> 8;
 	uint8_t lowerHalf = code[0];
 	uint8_t field1 = (code[0] >> 4) & (0x0F);
@@ -249,11 +259,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 	uint8_t upperFour = code[0] >> 12;
 	uint8_t secondNibble = upperHalf & 0x0F;
 
-	printf("%04x\n", code[0]);
-	printf("%04x\n", code[1]);
-	printf("%04x\n", code[2]);
-	printf("%04x\n", code[3]);
-	printf("%04x\n", code[4]);
+	
 	 // printf("%02x \n", upperHalf);
 	 // printf("%02x \n", lowerHalf);
 	// printf("%01x \n", field1);
@@ -266,11 +272,27 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 	printf("%04x ", pc);
 	switch (upperTwo){
 		case 0x3:	switch(upperFour){
-						case 0x0e:	printf("JP %01x, ", secondNibble);
+						case 0xc:	printf("LDB ");								//LDB Rbd, #data
+									findregRegister(field1);
+									printf(", #%02x", lowerHalf);
+									break;
+						case 0xd:	printf("CALR %04x", (code[0] & 0x0FFF));		//CALR address
+									break;
+						case 0xe:	printf("JR %01x, ", secondNibble);			//JR cc, address
 									uint16_t addr = pc + (lowerHalf * 2);
 									printf("%02x\t", addr);
 									break;
-						default:	printf("I'm here now!");
+						case 0xf:	switch((field1 & 0x8)){
+										case 0x0:	printf("DBJNZ ");			//DBJNZ Rb, address
+													findRegister(secondNibble);
+													printf(", %02x", lowerHalf & 0x7F);
+													break;
+										case 0x1:	printf("DJNZ ");			//DJNZ R, address
+													break;
+										default:	("NOP from DJNZ");
+													break;
+									} break;
+						default:	printf("I'm here now!"); break;
 					} break;
 		default:	switch (upperHalf){
 						case 0x00: switch(field1){ // ADDB
@@ -287,12 +309,12 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 									} break;
 						case 0x01: switch(field1){
-										case 0x00:  printf("ADD ");				//ADD Rd, #data
+										case 0x00:  printf("ADD  ");				//ADD Rd, #data
 													findRegister(field2);
 													printf(", #%02x", code[1]);
 													opwords = 2;
 													break;
-										default:	printf("ADD ");				//ADD Rd, @Rs
+										default:	printf("ADD  ");				//ADD Rd, @Rs
 													findRegister(field2);
 													printf(", @");
 													findRegister(field1);
@@ -2220,6 +2242,22 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 
 									} break;
+						case 0xbc:	printf("RRDB ");					//RRDB Rbd, Rbs
+									findregRegister(field2);
+									printf(", ");
+									findregRegister(field1);
+									break;
+						case 0xbd:	printf("LDK ");						//LDK Rd, #data
+									findRegister(field1);
+									printf(", #%02x", field2);
+									break;
+						case 0xbe:	printf("RLDB ");					//RLDB Rbd, Rbs
+									findregRegister(field2);
+									printf(", ");
+									findregRegister(field1);
+									break;
+						case 0xbf:	printf("RESERVED");
+									break;
 
 						default: printf("%02x not implemented in dissasembler", upperHalf); break;
 					} break;
@@ -2230,7 +2268,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 int Emulate8002(State8002* state){
 	uint16_t *opcode = &state->memory[state->pc];
 
-	int done = 0;
+	int done = 0; 
 
 	uint8_t upperHalf = opcode[0] >> 8;
 	uint8_t lowerHalf = opcode[0];
@@ -2240,18 +2278,14 @@ int Emulate8002(State8002* state){
 	uint8_t field1 = (opcode[0] >> 4) & (0x0F);
 	uint8_t field2 = opcode[0] & 0x0F;
 
-	printf("%04x\n", opcode[0]);
-	printf("%04x\n", opcode[1]);
-	printf("%04x\n", opcode[2]);
-	printf("%04x\n", opcode[3]);
-	printf("%04x\n", opcode[4]);
-
-	printf("\n");
-
 	Disassemble8002(state->memory, state->pc);
 
-	//printf("point to memory plus 1 is :%x\n",(*(memptr8 + 2) ));
+	state->memory[0] = 2;
+
 	state->pc += 2;
+
+	//printf("point to memory plus 1 is :%x\n",(*(memptr8 + 2) ));
+	
 
 	switch(upperTwo){ //address mode/type of instruction
 		case 0b11:{  //special instruction
@@ -2271,157 +2305,334 @@ int Emulate8002(State8002* state){
 		default:{ //regular instruction
 			switch(upperHalf){ //opcode
 				case 0x00:{ //ADDB,  IM or IR
-					if(field1 == 0){	//ADDB (IM)
-						uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-						*destinationReg8 = *destinationReg8 + (opcode[1] >> 8); //assuming we only use the top bits
-						state->pc+=2;
-					}
-					else{ //ADDB (IR)
-						uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-						uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-						uint8_t* memptr8 = state->memory;
-						uint8_t memData8 = *(memptr8 + *sourceReg8);
-						*destinationReg8 = *destinationReg8 + memData8;
-					}
-				} break;
-				case 0b00000001:{//ADD IM or IR
-					if(field1 == 0){	//ADD (IM)
-						state->pc+=2;
-						uint16_t* destinationReg16 = returnByteRegisterPointer(field2, state);
-						*destinationReg16 = fix_16( fix_16(*destinationReg16) + opcode[1] ); //assuming we only use the top bits
-					}
-					else{ //ADD (IR)
-						uint16_t* destinationReg16 = returnByteRegisterPointer(field2, state);
-						uint16_t* sourceReg16 = returnByteRegisterPointer(field1, state);
-						uint16_t* memptr16 = state->memory;
-						uint16_t memData16 = fix_16(*(memptr16 + fix_16(*sourceReg16)));
-						*destinationReg16 = fix_16(fix_16(*destinationReg16) + memData16);
-					}
-				} break;
+								if(field1 == 0){	// ADDB Rbd, #data
+									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+									*destinationReg8 = *destinationReg8 + (opcode[1] >> 8); //assuming we only use the top bits
+									state->pc += 2;
+								}
+								else{ 				// ADDB Rbd, @Rs
+									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
+									*destinationReg8 = *destinationReg8 + state->memory[*sourceReg8];
+								}
+							} break;
+				case 0x01:{//ADD IM or IR
+								if(field1 == 0){	//ADD Rd, #data
+									uint16_t* destinationReg16 = returnByteRegisterPointer(field2, state);
+									*destinationReg16 = *destinationReg16 + opcode[1] ; //assuming we only use the top bits
+									state->pc += 2;
+								}
+								else{ 				//ADD Rd, @Rs
+									uint16_t* destinationReg16 = returnByteRegisterPointer(field2, state);
+									uint16_t* sourceReg16 = returnByteRegisterPointer(field1, state);
+									*destinationReg16 = *destinationReg16 + state->memory[*sourceReg16];
+								}
+							} break;
 				case 0x02:{
-					if(field1 == 0){	// SUBB Rbd, #data
-						uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-						*destinationReg8 = *destinationReg8 - (opcode[1] >> 8); //assuming we only use the upper eight bits
-					} else {			//SUBB Rbd, @Rs
-						uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-						uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-						uint8_t* memptr8 = state->memory;
-						uint8_t memData8 = *(memptr8 + *sourceReg8);
-						*destinationReg8 = *destinationReg8 - memData8;
-					}
-				} break;
+								if(field1 == 0){	// SUBB Rbd, #data
+									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+									*destinationReg8 = *destinationReg8 - (opcode[1] >> 8); //assuming we only use the upper eight bits
+									state->pc += 2;
+								} else {			//SUBB Rbd, @Rs
+									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
+									*destinationReg8 = *destinationReg8 - state->memory[*sourceReg8];
+								}
+							} break;
 				case 0x03:{
-					if(field1 == 0){	// SUB Rd, #data
-						uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-						*destinationReg16 = fix_16( fix_16(*destinationReg16) - opcode[1]);
-					} else {
-						//uint16_t* destinationReg16 = return
-					}
-				} break;
-				case 0b00010110:{//ADDL IM or IR
-					if(field1 == 0){	//ADDB (IM)
-						state->pc += 2 ;
-						uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
-						uint32_t immediate = (opcode[1] << 16) & opcode[2];
-						*destinationReg32 = fix_32( fix_32(*destinationReg32) + immediate ); //assuming we only use the top bits
-					}
-					else{ //ADDB (IR)
-						uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
-						uint32_t* sourceReg32 = returnLongRegisterPointer(field1, state);
-						uint32_t* memptr32 = state->memory;
-						uint32_t memData32 = fix_32(*(memptr32 + fix_32(*sourceReg32)));
-						*destinationReg32 = fix_32(*destinationReg32) + memData32;
-					}
-				}break;
-				case 0b10000000:{ // ADDB (R)
-		      uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-		      uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-		      *destinationReg8 = *destinationReg8 + *sourceReg8;
-		    }break;
-		    case 0b10000001:{ // ADD (R)
-		      uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-		      uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
-		      *destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*sourceReg16));
-		    }break;
-				case 0b10010110:{//ADDL, R
-					uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
-		      uint32_t* sourceReg32 = returnLongRegisterPointer(field1, state);
-		      *destinationReg32 = fix_32(fix_32(*destinationReg32) + fix_32(*sourceReg32));
-				}break;
-				case 0b01000000:{//ADDB, DA or X
-					uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-					state->pc+=2;
-					uint8_t* memptr8 = state->memory;
+								if(field1 == 0){	// SUB Rd, #data
+									uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
+									*destinationReg16 = *destinationReg16 - opcode[1];
+									state->pc += 2;
+								} else {			// SUB Rd, @Rs
+									uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
+									uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
+									*destinationReg16 = *destinationReg16 - state->memory[*sourceReg16];
+								}
+							} break;
+				case 0x04:{
+								if(field1 == 0){	//ORB Rbd, #data
+									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+									if(field1 <= 7){
+										*destinationReg8 = *destinationReg8 | (opcode[1] >> 8); // Higher
+									} else{
+										*destinationReg8 = *destinationReg8 | (opcode[1]); // Lower
+									}
+								} else{				//ORB Rbd, @Rs
+									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
+									*destinationReg8 = *destinationReg8 | state->memory[*sourceReg8];
+								}
+							} break;
+				case 0x05: UnimplementedInstruction(state);	break;
+				case 0x06: UnimplementedInstruction(state);	break;
+				case 0x07: UnimplementedInstruction(state);	break;
+				case 0x08: UnimplementedInstruction(state);	break;
+				case 0x09: UnimplementedInstruction(state); break;
+				case 0x0a: UnimplementedInstruction(state);	break;
+				case 0x0b: UnimplementedInstruction(state);	break;
+				case 0x0c: UnimplementedInstruction(state); break;
+				case 0x0d: UnimplementedInstruction(state);	break;
+				case 0x0e: UnimplementedInstruction(state);	break;
+				case 0x0f: UnimplementedInstruction(state); break;
+				case 0x10: UnimplementedInstruction(state);	break;
+				case 0x11: UnimplementedInstruction(state);	break;
+				case 0x12: UnimplementedInstruction(state);	break;
+				case 0x13: UnimplementedInstruction(state);	break;
+				case 0x14: UnimplementedInstruction(state);	break;
+				case 0x15: UnimplementedInstruction(state);	break;
+				case 0x16: {//ADDL IM or IR
+								if(field1 == 0){	//ADDB (IM)
+									state->pc += 2 ;
+									uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
+									uint32_t immediate = (opcode[1] << 16) & opcode[2];
+									*destinationReg32 = fix_32( fix_32(*destinationReg32) + immediate ); //assuming we only use the top bits
+								}
+								else{ //ADDB (IR)
+									uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
+									uint32_t* sourceReg32 = returnLongRegisterPointer(field1, state);
+									uint32_t* memptr32 = state->memory;
+									uint32_t memData32 = fix_32(*(memptr32 + fix_32(*sourceReg32)));
+									*destinationReg32 = fix_32(*destinationReg32) + memData32;
+								}
+							} break;
+				case 0x17: UnimplementedInstruction(state);	break;
+				case 0x18: UnimplementedInstruction(state); break;
+				case 0x19: UnimplementedInstruction(state);	break;
+				case 0x1a: UnimplementedInstruction(state);	break;
+				case 0x1b: UnimplementedInstruction(state);	break;
+				case 0x1c: UnimplementedInstruction(state);	break;
+				case 0x1d: UnimplementedInstruction(state);	break;
+				case 0x1e: UnimplementedInstruction(state); break;
+				case 0x1f: UnimplementedInstruction(state);	break;
+				case 0x20: UnimplementedInstruction(state);	break;
+				case 0x21: UnimplementedInstruction(state); break;
+				case 0x22: UnimplementedInstruction(state);	break;
+				case 0x23: UnimplementedInstruction(state);	break;
+				case 0x24: UnimplementedInstruction(state); break;
+				case 0x25: UnimplementedInstruction(state);	break;
+				case 0x26: UnimplementedInstruction(state);	break;
+				case 0x27: UnimplementedInstruction(state);	break;
+				case 0x28: UnimplementedInstruction(state);	break;
+				case 0x29: UnimplementedInstruction(state);	break;
+				case 0x30: UnimplementedInstruction(state); break;
+				case 0x31: UnimplementedInstruction(state);	break;
+				case 0x32: UnimplementedInstruction(state);	break;
+				case 0x33: UnimplementedInstruction(state); break;
+				case 0x34: UnimplementedInstruction(state);	break;
+				case 0x35: UnimplementedInstruction(state);	break;
+				case 0x36: UnimplementedInstruction(state);	break;
+				case 0x37: UnimplementedInstruction(state);	break;
+				case 0x38: UnimplementedInstruction(state);	break;
+				case 0x39: UnimplementedInstruction(state);	break;
+				case 0x40: { //ADDB, DA or X
+								uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+								state->pc+=2;
+								uint8_t* memptr8 = state->memory;
 
-					if(field1 == 0){	//ADDB (DA)
-						*destinationReg8 = *destinationReg8 + *(memptr8 + opcode[1]); //assuming we only use the top bits
-					}
-					else{ //ADDB (IR)
-						uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-						*destinationReg8 = *destinationReg8 + *(memptr8 + opcode[1] + *sourceReg8); //assuming we only use the top bits
-					}
-				}break;
-				case 0b01000001:{//ADD, DA or X
-					uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-					state->pc+=2;
-					uint16_t* memptr16 = state->memory;
+								if(field1 == 0){	//ADDB (DA)
+									*destinationReg8 = *destinationReg8 + *(memptr8 + opcode[1]); //assuming we only use the top bits
+								}
+								else{ //ADDB (IR)
+									uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
+									*destinationReg8 = *destinationReg8 + *(memptr8 + opcode[1] + *sourceReg8); //assuming we only use the top bits
+								}
+							} break;
+				case 0x41: {//ADD, DA or X
+								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
+								state->pc+=2;
+								uint16_t* memptr16 = state->memory;
 
-					if(field1 == 0){	//ADD (DA)
-						*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*(memptr16 + opcode[1]))); //assuming we only use the top bits
-					}
-					else{ //ADD (IR)
-						uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
-						*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*(memptr16 + opcode[1] + fix_16(*sourceReg16)))); //assuming we only use the top bits
-					}
-				}break;
-				case 0b01010110:{//ADDL, DA or X
-					uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
-					state->pc+=2;
-					uint32_t* memptr32 = state->memory;
+								if(field1 == 0){	//ADD (DA)
+									*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*(memptr16 + opcode[1]))); //assuming we only use the top bits
+								}
+								else{ //ADD (IR)
+									uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
+									*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*(memptr16 + opcode[1] + fix_16(*sourceReg16)))); //assuming we only use the top bits
+								}
+							} break;
+				case 0x42: UnimplementedInstruction(state);	break;
+				case 0x43: UnimplementedInstruction(state);	break;
+				case 0x44: UnimplementedInstruction(state);	break;
+				case 0x45: UnimplementedInstruction(state);	break;
+				case 0x46: UnimplementedInstruction(state);	break;
+				case 0x47: UnimplementedInstruction(state);	break;
+				case 0x48: UnimplementedInstruction(state); break;
+				case 0x49: UnimplementedInstruction(state);	break;
+				case 0x4a: UnimplementedInstruction(state);	break;
+				case 0x4b: UnimplementedInstruction(state); break;
+				case 0x4c: UnimplementedInstruction(state);	break;
+				case 0x4d: UnimplementedInstruction(state);	break;
+				case 0x4e: UnimplementedInstruction(state); break;
+				case 0x4f: UnimplementedInstruction(state);	break;
+				case 0x50: UnimplementedInstruction(state);	break;
+				case 0x51: UnimplementedInstruction(state); break;
+				case 0x52: UnimplementedInstruction(state);	break;
+				case 0x53: UnimplementedInstruction(state);	break;
+				case 0x54: UnimplementedInstruction(state); break;
+				case 0x55: UnimplementedInstruction(state);	break;
+				case 0x56: {//ADDL, DA or X
+								uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
+								state->pc+=2;
+								uint32_t* memptr32 = state->memory;
 
-					if(field1 == 0){	//ADDL (DA)
-						*destinationReg32 = fix_32(fix_32(*destinationReg32) + fix_32(*(memptr32 + opcode[1]))); //assuming we only use the top bits
-					}
-					else{ //ADDL (IR)
-						uint32_t* sourceReg32 = returnLongRegisterPointer(field1, state);
-						*destinationReg32 = fix_32(fix_32(*destinationReg32) + fix_32(*(memptr32 + opcode[1] + fix_32(*sourceReg32)))); //assuming we only use the top bits
-					}
-				}break;
-				case 0b10001011:{//CP R  needs work on C and V flags
-					uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-				 	uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
-				 	uint32_t result = fix_16(*destinationReg16) - fix_16(*sourceReg16);
-					ConditionCodes* cc = state->cc;
-					if(result & 0x80 == fix_16(*destinationReg16) & 0x80){ // MSB has no borrow
-						cc->c = 0;
-					}
-					else{
-						cc->c = 1;
-					}
+								if(field1 == 0){	//ADDL (DA)
+									*destinationReg32 = fix_32(fix_32(*destinationReg32) + fix_32(*(memptr32 + opcode[1]))); //assuming we only use the top bits
+								}
+								else{ //ADDL (IR)
+									uint32_t* sourceReg32 = returnLongRegisterPointer(field1, state);
+									*destinationReg32 = fix_32(fix_32(*destinationReg32) + fix_32(*(memptr32 + opcode[1] + fix_32(*sourceReg32)))); //assuming we only use the top bits
+								}
+							} break;
+				case 0x57: UnimplementedInstruction(state); break;
+				case 0x58: UnimplementedInstruction(state);	break;
+				case 0x59: UnimplementedInstruction(state);	break;
+				case 0x5a: UnimplementedInstruction(state);	break;
+				case 0x5b: UnimplementedInstruction(state);	break;
+				case 0x5c: UnimplementedInstruction(state);	break;
+				case 0x5d: UnimplementedInstruction(state); break;
+				case 0x5e: UnimplementedInstruction(state);	break;
+				case 0x5f: UnimplementedInstruction(state);	break;
+				case 0x60: UnimplementedInstruction(state); break;
+				case 0x61: UnimplementedInstruction(state);	break;
+				case 0x62: UnimplementedInstruction(state);	break;
+				case 0x63: UnimplementedInstruction(state); break;
+				case 0x64: UnimplementedInstruction(state);	break;
+				case 0x65: UnimplementedInstruction(state);	break;
+				case 0x66: UnimplementedInstruction(state);	break;
+				case 0x67: UnimplementedInstruction(state);	break;
+				case 0x68: UnimplementedInstruction(state);	break;
+				case 0x69: UnimplementedInstruction(state);	break;
+				case 0x6a: UnimplementedInstruction(state);	break;
+				case 0x6b: UnimplementedInstruction(state);	break;
+				case 0x6c: UnimplementedInstruction(state); break;
+				case 0x6d: UnimplementedInstruction(state);	break;
+				case 0x6e: UnimplementedInstruction(state);	break;
+				case 0x6f: UnimplementedInstruction(state);	break;
+				case 0x70: UnimplementedInstruction(state);	break;
+				case 0x71: UnimplementedInstruction(state);	break;
+				case 0x72: UnimplementedInstruction(state); break;
+				case 0x73: UnimplementedInstruction(state);	break;
+				case 0x74: UnimplementedInstruction(state);	break;
+				case 0x75: UnimplementedInstruction(state); break;
+				case 0x76: UnimplementedInstruction(state);	break;
+				case 0x77: UnimplementedInstruction(state);	break;
+				case 0x78: UnimplementedInstruction(state); break;
+				case 0x79: UnimplementedInstruction(state);	break;
+				case 0x7a: UnimplementedInstruction(state);	break;
+				case 0x7b: UnimplementedInstruction(state);	break;
+				case 0x7c: UnimplementedInstruction(state);	break;
+				case 0x7d: UnimplementedInstruction(state);	break;
+				case 0x7e: UnimplementedInstruction(state); break;
+				case 0x7f: UnimplementedInstruction(state);	break;
+				case 0x80: { // ADDB (R)
+						    	uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+						    	uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
+						    	destinationReg8 = *destinationReg8 + *sourceReg8;
+		   					} break;	
+				case 0x81: { // ADD (R)
+								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
+						    	uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
+						    	*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*sourceReg16));
+		    				} break;
+				case 0x82: UnimplementedInstruction(state);	break;
+				case 0x83: UnimplementedInstruction(state);	break;
+				case 0x84: UnimplementedInstruction(state);	break;
+				case 0x85: UnimplementedInstruction(state);	break;
+				case 0x86: UnimplementedInstruction(state);	break;
+				case 0x87: UnimplementedInstruction(state);	break;
+				case 0x88: UnimplementedInstruction(state);	break;
+				case 0x89: UnimplementedInstruction(state);	break;
+				case 0x8a: UnimplementedInstruction(state);	break;
+				case 0x8b: {//CP R  needs work on C and V flags
+								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
+							 	uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
+							 	uint32_t result = fix_16(*destinationReg16) - fix_16(*sourceReg16);
+								ConditionCodes* cc = state->cc;
+								if(result & 0x80 == fix_16(*destinationReg16) & 0x80){ // MSB has no borrow
+									cc->c = 0;
+								}
+								else{
+									cc->c = 1;
+								}
 
-					if(result == 0){
-						state->cc->z = 1;
-					}
-					else{
-						state->cc->z = 0;
-					}
+								if(result == 0){
+									state->cc->z = 1;
+								}
+								else{
+									state->cc->z = 0;
+								}
 
-					if(result < 0){
-						state->cc->s = 1;
-					}
-					else{
-						state->cc->s = 0;
-					}
+								if(result < 0){
+									state->cc->s = 1;
+								}
+								else{
+									state->cc->s = 0;
+								}
 
-					if(result & 0x100 > 0){
-						state->cc->v = 1;
-					}
-					else{
-						state->cc->s = 0;
-					}
-				}break;
-
-
+								if(result & 0x100 > 0){
+									state->cc->v = 1;
+								}
+								else{
+									state->cc->s = 0;
+								}
+							} break;
+				case 0x8c: UnimplementedInstruction(state);	break;
+				case 0x8d: UnimplementedInstruction(state);	break;
+				case 0x8e: UnimplementedInstruction(state);	break;
+				case 0x8f: UnimplementedInstruction(state);	break;
+				case 0x90: UnimplementedInstruction(state); break;
+				case 0x91: UnimplementedInstruction(state);	break;
+				case 0x92: UnimplementedInstruction(state);	break;
+				case 0x93: UnimplementedInstruction(state); break;
+				case 0x94: UnimplementedInstruction(state);	break;
+				case 0x95: UnimplementedInstruction(state);	break;
+				case 0x96: {//ADDL, R
+								uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
+				      			uint32_t* sourceReg32 = returnLongRegisterPointer(field1, state);
+				      			*destinationReg32 = fix_32(fix_32(*destinationReg32) + fix_32(*sourceReg32));
+							} break;
+				case 0x97: UnimplementedInstruction(state);	break;
+				case 0x98: UnimplementedInstruction(state);	break;
+				case 0x99: UnimplementedInstruction(state); break;
+				case 0x9a: UnimplementedInstruction(state);	break;
+				case 0x9b: UnimplementedInstruction(state);	break;
+				case 0x9c: UnimplementedInstruction(state); break;
+				case 0x9d: UnimplementedInstruction(state);	break;
+				case 0x9e: UnimplementedInstruction(state);	break;
+				case 0x9f: UnimplementedInstruction(state); break;
+				case 0xa0: UnimplementedInstruction(state);	break;
+				case 0xa1: UnimplementedInstruction(state);	break;
+				case 0xa2: UnimplementedInstruction(state);	break;
+				case 0xa3: UnimplementedInstruction(state);	break;
+				case 0xa4: UnimplementedInstruction(state);	break;
+				case 0xa5: UnimplementedInstruction(state); break;
+				case 0xa6: UnimplementedInstruction(state);	break;
+				case 0xa7: UnimplementedInstruction(state);	break;
+				case 0xa8: UnimplementedInstruction(state); break;
+				case 0xa9: UnimplementedInstruction(state);	break;
+				case 0xaa: UnimplementedInstruction(state);	break;
+				case 0xab: UnimplementedInstruction(state); break;
+				case 0xac: UnimplementedInstruction(state);	break;
+				case 0xad: UnimplementedInstruction(state);	break;
+				case 0xae: UnimplementedInstruction(state);	break;
+				case 0xaf: UnimplementedInstruction(state);	break;
+				case 0xb0: UnimplementedInstruction(state);	break;
+				case 0xb1: UnimplementedInstruction(state);	break;
+				case 0xb2: UnimplementedInstruction(state);	break;
+				case 0xb3: UnimplementedInstruction(state);	break;
+				case 0xb4: UnimplementedInstruction(state); break;
+				case 0xb5: UnimplementedInstruction(state);	break;
+				case 0xb6: UnimplementedInstruction(state);	break;
+				case 0xb7: UnimplementedInstruction(state);	break;
+				case 0xb8: UnimplementedInstruction(state);	break;
+				case 0xb9: UnimplementedInstruction(state);	break;
+				case 0xba: UnimplementedInstruction(state); break;
+				case 0xbb: UnimplementedInstruction(state);	break;
+				case 0xbc: UnimplementedInstruction(state);	break;
+				case 0xbd: UnimplementedInstruction(state); break;
+				case 0xbe: UnimplementedInstruction(state);	break;
+				case 0xbf: UnimplementedInstruction(state);	break;
 				default: printf("dicks2");done=1; break;
 			}
 		}
