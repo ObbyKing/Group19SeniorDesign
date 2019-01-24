@@ -2306,66 +2306,91 @@ int Emulate8002(State8002* state){
 			switch(upperHalf){ //opcode
 				case 0x00:{ //ADDB,  IM or IR
 								if(field1 == 0){	// ADDB Rbd, #data
-									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-									*destinationReg8 = *destinationReg8 + (opcode[1] >> 8); //assuming we only use the top bits
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									*dReg8 = *dReg8 + (opcode[1] >> 8); //assuming we only use the top bits
 									state->pc += 2;
 								}
 								else{ 				// ADDB Rbd, @Rs
-									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-									uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-									*destinationReg8 = *destinationReg8 + state->memory[*sourceReg8];
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
+									*dReg8 = *dReg8 + state->memory[*sReg8];
 								}
 							} break;
 				case 0x01:{//ADD IM or IR
 								if(field1 == 0){	//ADD Rd, #data
-									uint16_t* destinationReg16 = returnByteRegisterPointer(field2, state);
-									*destinationReg16 = *destinationReg16 + opcode[1] ; //assuming we only use the top bits
+									uint16_t* dReg16 = returnByteRegisterPointer(field2, state);
+									*dReg16 = *dReg16 + opcode[1] ; //assuming we only use the top bits
 									state->pc += 2;
 								}
 								else{ 				//ADD Rd, @Rs
-									uint16_t* destinationReg16 = returnByteRegisterPointer(field2, state);
-									uint16_t* sourceReg16 = returnByteRegisterPointer(field1, state);
-									*destinationReg16 = *destinationReg16 + state->memory[*sourceReg16];
+									uint16_t* dReg16 = returnByteRegisterPointer(field2, state);
+									uint16_t* sReg16 = returnByteRegisterPointer(field1, state);
+									*dReg16 = *dReg16 + state->memory[*sReg16];
 								}
 							} break;
 				case 0x02:{
 								if(field1 == 0){	// SUBB Rbd, #data
-									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-									*destinationReg8 = *destinationReg8 - (opcode[1] >> 8); //assuming we only use the upper eight bits
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									*dReg8 = *dReg8 - (opcode[1] >> 8); //assuming we only use the upper eight bits
 									state->pc += 2;
 								} else {			//SUBB Rbd, @Rs
-									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-									uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-									*destinationReg8 = *destinationReg8 - state->memory[*sourceReg8];
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
+									*dReg8 = *dReg8 - state->memory[*sReg8];
 								}
 							} break;
 				case 0x03:{
 								if(field1 == 0){	// SUB Rd, #data
-									uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-									*destinationReg16 = *destinationReg16 - opcode[1];
+									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
+									*dReg16 = *dReg16 - opcode[1];
 									state->pc += 2;
 								} else {			// SUB Rd, @Rs
-									uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-									uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
-									*destinationReg16 = *destinationReg16 - state->memory[*sourceReg16];
+									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
+									uint16_t* sReg16 = returnWordRegisterPointer(field1, state);
+									*dReg16 = *dReg16 - state->memory[*sReg16];
 								}
 							} break;
 				case 0x04:{
 								if(field1 == 0){	//ORB Rbd, #data
-									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
 									if(field1 <= 7){
-										*destinationReg8 = *destinationReg8 | (opcode[1] >> 8); // Higher
+										*dReg8 = *dReg8 | (opcode[1] >> 8); // Higher
 									} else{
-										*destinationReg8 = *destinationReg8 | (opcode[1]); // Lower
+										*dReg8 = *dReg8 | (opcode[1]); // Lower
 									}
+									state->pc += 2;
 								} else{				//ORB Rbd, @Rs
-									uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-									uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-									*destinationReg8 = *destinationReg8 | state->memory[*sourceReg8];
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
+									*dReg8 = *dReg8 | state->memory[*sReg8];
 								}
 							} break;
-				case 0x05: UnimplementedInstruction(state);	break;
-				case 0x06: UnimplementedInstruction(state);	break;
+				case 0x05: {
+								if(field1 == 0){	//OR Rd, #data
+									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
+									*dReg16 = *dReg16 | opcode[1];
+									state->pc += 2;
+								} else{				//OR Rd, @Rs	
+									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
+									uint16_t* sReg16 = returnWordRegisterPointer(field1, state);
+									*dReg16 = *dReg16 | state->memory[*sReg16];
+								}
+							}	break;
+				case 0x06: {
+								if(field1 == 0){	//ANDB Rbd, #data
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									if(field1 <= 7){
+										*dReg8 = *dReg8 & (opcode[1] >> 8); //Higher
+									} else{
+										*dReg8 = *dReg8 & opcode[1]; //Lower
+									}
+									state->pc += 2;
+								} else{				//ANDB Rbd, @Rs
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
+									*dReg8 = *dr
+								}
+							}	break;
 				case 0x07: UnimplementedInstruction(state);	break;
 				case 0x08: UnimplementedInstruction(state);	break;
 				case 0x09: UnimplementedInstruction(state); break;
