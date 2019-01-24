@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <arpa/inet.h>
-//#include <winsock2.h>
+//#include <arpa/inet.h>
+#include <winsock2.h>
 
 
 typedef int bool;
@@ -504,7 +504,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 									} break;
 						case 0x0e:	printf("NOP"); break;
-						case 0x0f:	printf("LD EPU"); break;					//TODO: IMPLEMENT THIS!
+						case 0x0f:	printf("Hardware Instruction, Load from EPU, Opcode: 0x0F"); break;
 
 						case 0x10:	switch(field1){
 										case 0x00:	printf("CPL ");				//CPL RRd, #data
@@ -662,64 +662,78 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													findRegister(field1);
 													break;
 									} break;
-						case 0x22:	switch(field1){	//TODO
+						case 0x22:	switch(field1){	
 										case 0x00:	printf("RESB ");				//RESB Rbd, Rs
+													findregRegister(code[1] >> 8);
+													printf(", ")
 													findRegister(field2);
-													printf(", #%02x", code[1]);
 													opwords = 2;
 													break;
 
-										default:	printf("RESB ");				//RESB @Rd, #b
+										default:	printf("RESB @");				//RESB @Rd, #b
 													findRegister(field2);
-													printf(", @");
+													printf(", #");
 													findRegister(field1);
 													break;
 
 									}	break;
-						case 0x23:	switch(field1){	//TODO
+						case 0x23:	switch(field1){	
 										case 0x00:	printf("RES ");				//RES Rd, Rs
 													findRegister(field2);
+													printf(", ")
 													printf(", #%02x", code[1]);
 													opwords = 2;
 													break;
 
-										default:	printf("RES ");				//RES @Rd, #b
-													findRegister(field2);
-													printf(", @");
+										default:	printf("RES @");				//RES @Rd, #b
+													findRegister(field1);
+													printf(", #");
 													findRegister(field1);
 													break;
 
 									}	break;
 						case 0x24:	switch(field1){
-										case 0x00:	printf("SETB ");			//TODO: Implement
+										case 0x00:	printf("SETB @");			//SETB @Rbd, Rs
+													findregRegister(code[1]>>8);
+													printf(", ");
+													findRegister(field2);
 													break;
 										default:	printf("SETB @");			//SETB @Rd, #b
 													findregRegister(field1);
-													printf(", #%01x", field2);
+													printf(", #%02x", field2);
 													break;
 									} break;
 						case 0x25:	switch(field1){
-										case 0x00:	printf("SET ");				//TODO: Implement
+										case 0x00:	printf("SET ");				//SET Rd, Rs
+													findRegister(code[1]>>8);
+													printf(", ");
+													findRegister(field2);
 													break;
 										default:	printf("SET @");			//SET @Rd, #b
 													findRegister(field1);
-													printf(", #%01x", field2);
+													printf(", #%02x", field2);
 													break;
 									} break;
 						case 0x26:	switch(field1){
-										case 0x00:	printf("BITB ");			//TODO: Implement
+										case 0x00:	printf("BITB ");			//BITB Rbd, Rs
+													findRegister(code[1]>>8);
+													printf(", ");
+													findRegister(field2);
 													break;
 										default:	printf("BITB @");			//BITB @Rd, #b
 													findregRegister(field1);
-													printf(", #%01x", field2);
+													printf(", #%02x", field2);
 													break;
 									} break;
 						case 0x27:	switch(field1){
-										case 0x00:	printf("BIT ");				//TODO: Implement
+										case 0x00:	printf("BIT ");				//BIT Rd, Rs
+													findRegister(code[1]>>8);
+													printf(", ");
+													findRegister(field2);
 													break;
 										default:	printf("BIT @");			//BIT @Rd, #b
 													findRegister(field1);
-													printf(", #%01x", field2);
+													printf(", #%02x", field2);
 													break;
 									} break;
 						case 0x28:	printf("INCB @");							//INCB @Rd, #n
@@ -776,9 +790,9 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 
 									} break;
 						case 0x31:	switch(field1){
-										case 0x00:	printf("LDR ");				//LDR Rd, address TODO
+										case 0x00:	printf("LDR ");				//LDR Rd, address
 													findRegister(field2);
-													printf(", %04x", code[1]);
+													printf(", @%04x", code[1]);
 													opwords = 2;
 													break;
 										default:	printf("LD ");				//LD Rd, Rs(#disp)
@@ -790,7 +804,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 									} break;
 						case 0x32:	switch(field1){
-										case 0x00:	printf("LDRB %04x, ", code[1]);	//LDRB address, Rbs TODO
+										case 0x00:	printf("LDRB %04x, ", code[1]);	//LDRB address, Rbs 
 													findregRegister(field2);
 													opwords = 2;
 													break;
@@ -802,7 +816,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 									} break;
 						case 0x33:	switch(field1){
-										case 0x00:	printf("LDR %04x, ", code[1]); //LDR address, Rs TODO
+										case 0x00:	printf("LDR %04x, ", code[1]); //LDR address, Rs 
 													findRegister(field2);
 													opwords = 2;
 													break;
@@ -814,7 +828,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 									} break;
 						case 0x34:	switch(field1){
-										case 0x00:	printf("LDAR ");			// LDAR Rd, address TODO
+										case 0x00:	printf("LDAR ");			// LDAR Rd, address 
 													findRegister(field2);
 													printf(", %04x", code[1]);
 													opwords = 2;
@@ -828,7 +842,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 									} break;
 						case 0x35:	switch(field1){
-										case 0x00:	printf("LDRL ");			//LDRL RRd, address TODO
+										case 0x00:	printf("LDRL ");			//LDRL RRd, address 
 													findLongRegister(field2);
 													printf(", %04x", code[1]);
 													opwords = 2;
@@ -841,7 +855,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									} break;
 						case 0x36:	printf("Reserved"); break;
 						case 0x37:	switch(field1){
-										case 0x00:	printf("LDRL %04x, ", code[1]);	//LDRL address, RRs TODO
+										case 0x00:	printf("LDRL %04x, ", code[1]);	//LDRL address, RRs 
 													findLongRegister(field2);
 													opwords = 2;
 													break;
@@ -854,14 +868,14 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									} break;
 						case 0x38:	printf("Reserved"); break;
 						case 0x39:	switch(field2){
-										case 0x00:	printf("LDPS @");			//LDPS @Rs TODO
+										case 0x00:	printf("LDPS @");			//LDPS @Rs 
 													findRegister(field1);
 													break;
 										default:	printf("Reserved");
 													break;
 									} break;
-						case 0x3a:	printf("TODO: Hardware Instructions"); break;
-						case 0x3b:	printf("TODO: Hardware Instructions"); break;
+						case 0x3a:	printf("Hardware Instruction INB, opcode 0x3a, not implemented"); break;
+						case 0x3b:	printf("Special Input/Output instructions, opcode 0x3b, not implemented"); break;
 						case 0x3c:	printf("INB ");								//INB Rbd, @Rs
 									findregRegister(field2);
 									printf(", @");
@@ -1066,7 +1080,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 														case 0x04:	printf("TESTB %04x", code[1]);	//TESTB address
 																	opwords = 2;
 																	break;
-														case 0x05:	printf("LDB ");				//TODO
+														case 0x05:	printf("LDB ");					//LDB address, Rs
 																	break;
 														case 0x06:	printf("TSETB %04x", code[1]);	//TSETB address
 																	opwords = 2;
@@ -2388,7 +2402,7 @@ int Emulate8002(State8002* state){
 								} else{				//ANDB Rbd, @Rs
 									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
 									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
-									*dReg8 = *dr
+									//*dReg8 = *dr; //Todo dr is not declared and I don;t know what it should be
 								}
 							}	break;
 				case 0x07: UnimplementedInstruction(state);	break;
