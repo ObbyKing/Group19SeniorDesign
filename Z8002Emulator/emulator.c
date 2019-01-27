@@ -1111,9 +1111,10 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 																	printf(")");
 																	opwords = 2;
 																	break;
-														case 0x05:	printf("LDB %04x(",code[1]);	//TODO
+														case 0x05:	printf("LDB %04x(",code[1]);	//LDB addr(Rd), Rbs
 																	findregRegister(field1);
-																	printf("), TODO");
+																	printf("), ");
+																	printf("Rbs");
 																	opwords = 3;
 																	break;
 														case 0x06:	printf("TSETB %04x(", code[1]);	//TSETB addr(Rd)
@@ -1131,10 +1132,60 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									} break;
 						case 0x4d:	switch(field1){
 										case 0x00:	switch(field2){
-														default: printf("TODO");
+														case 0x08:	printf("CLR ");					//CLR address
+																	printf("%04x", code[1]);
+																	opwords = 2;
+																	break;
+
+														case 0x00:	printf("COM ");					//COM address
+																	printf("%04x", code[1]);
+																	opwords = 2;
+																	break;
+
+														case 0x01:	printf("CP ");					//CP address, #data
+																	printf("%04x", code[1]);
+																	printf(", ")
+																	printf("#%04x", code[2]);
+																	opwords = 3;
+																	break;
+
+														case 0x05:	printf("CLR ");					//LD address, Rs
+																	printf("%04x", code[1]);
+																	printf(", ")
+																	findRegister(code[2]);
+																	opwords = 3;
+																	break;
+
+														case 0x02:	printf("NEG ");					//NEG address
+																	printf("%04x", code[1]);
+																	opwords = 2;
+																	break;
+
+														case 0x00:	printf("TEST ");					//TEST address
+																	printf("%04x", code[1]);
+																	opwords = 2;
+																	break;
+
+														case 0x06:	printf("TEST ");					//TEST address
+																	printf("%04x", code[1]);
+																	opwords = 2;
+																	break;
+
+
+														default: printf("Reserved Op Code: 0x4d"); break;
 													} break;
 										default:	switch(field2){
-														default: printf("TODO");
+														
+														case 0x04:	printf("TEST ");					//TEST address(Rd)
+																	printf("%04x", code[1]);
+																	printf("(");
+																	findRegister(field1);
+																	printf(")");
+																	opwords = 2;
+																	break;
+
+														default: printf("Reserved Op Code: 0x4d"); break;
+
 													} break;
 									} break;
 						case 0x4e:	printf("NOP");
