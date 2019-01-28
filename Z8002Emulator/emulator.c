@@ -57,11 +57,17 @@ typedef	struct State8002{
 	uint16_t 	R14;
 	uint16_t 	sp;	// Register 15 is the stack pointer
 	uint16_t	pc; // Program counter
-	uint8_t 	*memory; // 64k memory space the Z8002 does not use segmented mode
-	uint16_t 	*dataSpace; // 64k memory space the Z8002 does not use segmented mode
-	uint16_t 	*memory; // 64k memory space the Z8002 does not use segmented mode
-	uint16_t 	*memory; // 64k memory space the Z8002 does not use segmented mode
 	struct ConditionCodes* cc;
+
+	uint16_t 	*dataSpaceNM; // 64k memory space the Z8002 does not use segmented mode
+	uint16_t 	*dataSpaceSM; // 64k memory space the Z8002 does not use segmented mode
+	uint16_t 	*instructionSpaceNM; // 64k memory space the Z8002 does not use segmented mode
+	uint16_t 	*instructionSpaceSM; // 64k memory space the Z8002 does not use segmented mode
+	uint16_t 	*stackNM; // 64k memory space the Z8002 does not use segmented mode
+	uint16_t 	*stackSM; // 64k memory space the Z8002 does not use segmented mode
+
+	uint16_t 	*memory; // 64k memory space the Z8002 does not use segmented mode
+	uint16_t 	*memory; // 64k memory space the Z8002 does not use segmented mode
 	uint8_t status;
 
 } State8002;
@@ -277,6 +283,17 @@ void writeZBus(uint16_t address, uint16_t data, State8002* state){
 	}
 }
 
+uint16_t readZBus(uint16_t address, uint16_t data, State8002* state){
+	uint8_t status = state->status;
+	if (status = 0b1000) { // data space normal mode
+		uint16_t* actualAddress = &state->dataSpaceNM + address;
+		*actualAddress = data;
+	}
+	if (status = 0b1010) { // data space normal mode
+		uint16_t* actualAddress = &state->dataSpaceSM + address;
+		*actualAddress = data;
+	}
+}
 
 void UnimplementedInstruction(State8002* state){
 	//pc will have advanced one, so undo that
@@ -2897,7 +2914,7 @@ State8002* Init8002(void){
 	// *p64 = fix_64(ll);
 	//
 	// for(int i = 0; i<8; i++)
-	// 	printf("%x\n",*(p8+i));
+	// 	pr`intf("%x\n",*(p8+i));
 	//
 	// for(int i = 0; i<4; i++)
 	// 	printf("%x\n",fix_16(*(p16+i)));
