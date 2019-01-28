@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-//#include <arpa/inet.h>
-#include <winsock2.h>
+#include <arpa/inet.h>
+//#include <winsock2.h>
 
 
 typedef int bool;
@@ -66,25 +66,25 @@ typedef	struct State8002{
 
 } State8002;
 
-bool checkConditionCode(uint8_t cc,ConditionCodes *o){
+bool checkConditionCode(uint8_t cc,ConditionCodes o){
 	cc = cc & 0x0F;
 	switch (cc) {
 		case 0b0000: return false; break;
-		case 0b0001: return (o->s ^ o->v); break;
-		case 0b0010: return (o->z || (o->s ^ o->v)); break;
-		case 0b0011: return (o->c || o->z); break;
-		case 0b0100: return o->v == 1; break;
-		case 0b0101: return o->s == 1; break;
-		case 0b0110: return o->z == 1; break;
-		case 0b0111: return o->c == 1; break;
+		case 0b0001: return (o.s ^ o.v); break;
+		case 0b0010: return (o.z || (o.s ^ o.v)); break;
+		case 0b0011: return (o.c || o.z); break;
+		case 0b0100: return o.v == 1; break;
+		case 0b0101: return o.s == 1; break;
+		case 0b0110: return o.z == 1; break;
+		case 0b0111: return o.c == 1; break;
 		case 0b1000: return true; break;
-		case 0b1001: return !(o->s ^ o->v); break;
-		case 0b1010: return !(o->z || (o->s ^ o->v)); break;
-		case 0b1011: return !(o->c || o->z); break;
-		case 0b1100: return o->v == 0; break;
-		case 0b1101: return o->s == 0; break;
-		case 0b1110: return o->z == 0; break;
-		case 0b1111: return o->c == 0; break;
+		case 0b1001: return !(o.s ^ o.v); break;
+		case 0b1010: return !(o.z || (o.s ^ o.v)); break;
+		case 0b1011: return !(o.c || o.z); break;
+		case 0b1100: return o.v == 0; break;
+		case 0b1101: return o.s == 0; break;
+		case 0b1110: return o.z == 0; break;
+		case 0b1111: return o.c == 0; break;
 	}
 }
 
@@ -706,32 +706,28 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 						case 0x22:	switch(field1){
 										case 0x00:	printf("RESB ");				//RESB Rbd, Rs
 													findregRegister(code[1] >> 8);
-													printf(", ")
+													printf(", ");
 													findRegister(field2);
 													opwords = 2;
 													break;
-
 										default:	printf("RESB @");				//RESB @Rd, #b
 													findRegister(field2);
 													printf(", #");
 													findRegister(field1);
 													break;
-
 									}	break;
 						case 0x23:	switch(field1){
 										case 0x00:	printf("RES ");				//RES Rd, Rs
 													findRegister(field2);
-													printf(", ")
+													printf(", ");
 													printf(", #%02x", code[1]);
 													opwords = 2;
 													break;
-
 										default:	printf("RES @");				//RES @Rd, #b
 													findRegister(field1);
 													printf(", #");
 													findRegister(field1);
 													break;
-
 									}	break;
 						case 0x24:	switch(field1){
 										case 0x00:	printf("SETB @");			//SETB @Rbd, Rs
@@ -1177,42 +1173,34 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 																	printf("%04x", code[1]);
 																	opwords = 2;
 																	break;
-
-														case 0x00:	printf("COM ");					//COM address
+														case 0x00:	printf("COM ");					//COM address TODO, there's two cases of 0x00
 																	printf("%04x", code[1]);
 																	opwords = 2;
 																	break;
-
 														case 0x01:	printf("CP ");					//CP address, #data
 																	printf("%04x", code[1]);
-																	printf(", ")
+																	printf(", ");
 																	printf("#%04x", code[2]);
 																	opwords = 3;
 																	break;
-
 														case 0x05:	printf("CLR ");					//LD address, Rs
 																	printf("%04x", code[1]);
-																	printf(", ")
+																	printf(", ");
 																	findRegister(code[2]);
 																	opwords = 3;
 																	break;
-
 														case 0x02:	printf("NEG ");					//NEG address
 																	printf("%04x", code[1]);
 																	opwords = 2;
 																	break;
-
-														case 0x00:	printf("TEST ");					//TEST address
-																	printf("%04x", code[1]);
-																	opwords = 2;
+														// case 0x00:	printf("TEST ");					//TEST address
+														// 			printf("%04x", code[1]);
+														// 			opwords = 2;
 																	break;
-
 														case 0x06:	printf("TEST ");					//TEST address
 																	printf("%04x", code[1]);
 																	opwords = 2;
 																	break;
-
-
 														default: printf("Reserved Op Code: 0x4d"); break;
 													} break;
 										default:	switch(field2){
@@ -2460,7 +2448,7 @@ int Emulate8002(State8002* state){
 				case 0x04:{
 								if(field1 == 0){	//ORB Rbd, #data
 									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
-									if(field1 <= 7){
+									if(field2 <= 7){
 										*dReg8 = *dReg8 | (opcode[1] >> 8); // Higher
 									} else{
 										*dReg8 = *dReg8 | (opcode[1]); // Lower
@@ -2486,7 +2474,7 @@ int Emulate8002(State8002* state){
 				case 0x06: {
 								if(field1 == 0){	//ANDB Rbd, #data
 									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
-									if(field1 <= 7){
+									if(field2 <= 7){
 										*dReg8 = *dReg8 & (opcode[1] >> 8); //Higher
 									} else{
 										*dReg8 = *dReg8 & opcode[1]; //Lower
@@ -2495,23 +2483,105 @@ int Emulate8002(State8002* state){
 								} else{				//ANDB Rbd, @Rs
 									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
 									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
-									//*dReg8 = *dr; //Todo dr is not declared and I don;t know what it should be
+									*dReg8 = *dReg8 & state->memory[*sReg8];
 								}
 							}	break;
-				case 0x07: UnimplementedInstruction(state);	break;
-				case 0x08: UnimplementedInstruction(state);	break;
-				case 0x09: UnimplementedInstruction(state); break;
-				case 0x0a: UnimplementedInstruction(state);	break;
-				case 0x0b: UnimplementedInstruction(state);	break;
-				case 0x0c: UnimplementedInstruction(state); break;
-				case 0x0d: UnimplementedInstruction(state);	break;
-				case 0x0e: UnimplementedInstruction(state);	break;
+				case 0x07: {
+								if(field1 == 0){	//AND Rd, #data
+									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
+									*dReg16 = *dReg16 & opcode[1];
+									state->pc += 2;
+								} else{				//AND Rd, @Rs
+									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
+									uint16_t* sReg16 = returnWordRegisterPointer(field1, state);
+									*dReg16 = *dReg16 & state->memory[*sReg16];
+								}
+							}	break;
+				case 0x08: {
+								if(field1 == 0){	//XORB Rbd, #data
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									if(field2 <= 7){
+										*dReg8 = *dReg8 ^ (opcode[1] >> 8); //Higher
+									} else{
+										*dReg8 = *dReg8 ^ opcode[1]; //Lower
+									}
+									state->pc += 2;
+								} else{				//XORB Rbd, @Rs
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
+									*dReg8 = *dReg8 ^ state->memory[*sReg8];
+								}
+							}	break;
+				case 0x09: {
+								if(field1 == 0){	//XOR Rd, #data
+									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
+									*dReg16 = *dReg16 ^ opcode[1];
+									state->pc += 2;
+								} else{				//XOR Rd, @Rs
+									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
+									uint16_t* sReg16 = returnWordRegisterPointer(field1, state);
+									*dReg16 = *dReg16 ^ state->memory[*sReg16];
+								}
+							}	break;
+				case 0x0a: {
+								if(field1 == 0){	//CPB Rbd, #data
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* res;
+									if(field2 <= 7){
+										*res = *dReg8 - (opcode[1] >> 8);	//Higher
+										state->cc.c = (*dReg8 < opcode[1] >> 8);
+									} else{
+										*res = *dReg8 - (opcode[1]);			//Lower
+										state->cc.c = (*dReg8 < opcode[1]);
+									}
+									state->cc.z = (*res == 0);
+									state->cc.s = (0x80 == (*res & 0x80));
+									//TODO state->cc.v
+									state->pc += 2;
+								} else{				//CPB Rbd, @Rs
+									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
+									uint8_t* res = *dReg8 - state->memory[*sReg8];
+									//TODO
+								}
+							}	break;
+				case 0x0b: UnimplementedInstruction(state);	break; //TODO CP Rd, #data & CP Rd, @Rs
+				case 0x0c: UnimplementedInstruction(state); break; //TODO
+				case 0x0d: UnimplementedInstruction(state);	break; //TODO
+				case 0x0e: break;	//NOP
 				case 0x0f: UnimplementedInstruction(state); break;
-				case 0x10: UnimplementedInstruction(state);	break;
-				case 0x11: UnimplementedInstruction(state);	break;
-				case 0x12: UnimplementedInstruction(state);	break;
-				case 0x13: UnimplementedInstruction(state);	break;
-				case 0x14: UnimplementedInstruction(state);	break;
+				case 0x10: UnimplementedInstruction(state);	break; //TODO
+				case 0x11: {		// PUSHL @Rd, @Rs TODO
+								uint32_t* dReg32 = returnLongRegisterPointer(field1, state);
+								uint32_t* sReg32 = returnLongRegisterPointer(field2, state);
+								uint32_t* temp = state->memory[*sReg32];
+								state->memory[*dReg32] = state->memory[*dReg32] - 4;
+								state->memory[*dReg32] = *temp;
+								//This might be wrong
+							}	break;
+				case 0x12: {
+								if(field1 == 0){	//SUBL RRd, #data
+									uint32_t* dReg32 = returnLongRegisterPointer(field2, state);
+									*dReg32 = *dReg32 - (opcode[1] | opcode[2]);
+									state->pc += 4;
+								} else{				//SUBL RRd, @Rs
+									uint32_t* dReg32 = returnLongRegisterPointer(field2, state);
+									uint32_t* sReg32 = returnLongRegisterPointer(field1, state);
+									*dReg32 = *dReg32 - state->memory[*sReg32]; //Might be wrong
+								}
+							}	break;
+				case 0x13: UnimplementedInstruction(state);	break; //TODO
+				case 0x14: {
+								if(field1 == 0){
+									uint32_t* dReg32 = returnLongRegisterPointer(field2, state);
+									*dReg32 = (opcode[1] | opcode[2]);
+									state->pc += 4;
+								} else{
+									uint32_t* dReg32 = returnLongRegisterPointer(field2, state);
+									uint32_t* sReg32 = returnLongRegisterPointer(field1, state);
+									*dReg32 = state->memory[*sReg32];
+								}
+							}	break;
 				case 0x15: UnimplementedInstruction(state);	break;
 				case 0x16: {//ADDL IM or IR
 								if(field1 == 0){	//ADDB (IM)
@@ -2661,7 +2731,7 @@ int Emulate8002(State8002* state){
 				case 0x80: { // ADDB (R)
 						    	uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
 						    	uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-						    	destinationReg8 = *destinationReg8 + *sourceReg8;
+						    	*destinationReg8 = *destinationReg8 + *sourceReg8;
 		   					} break;
 				case 0x81: { // ADD (R)
 								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
@@ -2681,33 +2751,32 @@ int Emulate8002(State8002* state){
 								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
 							 	uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
 							 	uint32_t result = fix_16(*destinationReg16) - fix_16(*sourceReg16);
-								ConditionCodes* cc = state->cc;
 								if(result & 0x80 == fix_16(*destinationReg16) & 0x80){ // MSB has no borrow
-									cc->c = 0;
+									state->cc.c = 0;
 								}
 								else{
-									cc->c = 1;
+									state->cc.c = 1;
 								}
 
 								if(result == 0){
-									state->cc->z = 1;
+									state->cc.z = 1;
 								}
 								else{
-									state->cc->z = 0;
+									state->cc.z = 0;
 								}
 
 								if(result < 0){
-									state->cc->s = 1;
+									state->cc.s = 1;
 								}
 								else{
-									state->cc->s = 0;
+									state->cc.s = 0;
 								}
 
 								if(result & 0x100 > 0){
-									state->cc->v = 1;
+									state->cc.v = 1;
 								}
 								else{
-									state->cc->s = 0;
+									state->cc.v = 0;
 								}
 							} break;
 				case 0x8c: UnimplementedInstruction(state);	break;
@@ -2805,13 +2874,13 @@ void ReadFileIntoMemoryAt(State8002* state, char* filename, uint32_t offset){
 
 State8002* Init8002(void){
 	State8002* state = calloc(1, sizeof(State8002));
-	state->cc = calloc(1,sizeof(ConditionCodes));
-	state->cc->c = 1;
-	state->cc->v = 1;
-	state->cc->s = 1;
-	state->cc->z = 1;
-	state->cc->d = 1;
-	state->cc->h = 1;
+	// state->cc = calloc(1,sizeof(ConditionCodes));
+	// state->cc.c = 1;
+	// state->cc.v = 1;
+	// state->cc.s = 1;
+	// state->cc.z = 1;
+	// state->cc.d = 1;
+	// state->cc.h = 1;
 	state->memory = malloc(0x10000); // 64k
 
 
