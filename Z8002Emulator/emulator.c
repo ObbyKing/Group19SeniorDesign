@@ -249,6 +249,31 @@ uint32_t* returnLongRegisterPointer(uint8_t regToFind, State8002* state){
 	return regPointer;
 }
 
+uint64_t* returnQuadRegisterPointer(uint8_t regToFind, State8002* state){
+	uint64_t* regPointer;
+	switch(regToFind){
+		case 0x00: regPointer = &state->R0; break;
+		case 0x01: printf("Invalid address for quad register");	return NULL; break;
+		case 0x02: printf("Invalid address for quad register");	return NULL; break;
+		case 0x03: printf("Invalid address for quad register");	return NULL; break;
+		case 0x04: regPointer = &state->R4; break;
+		case 0x05: printf("Invalid address for quad register");	return NULL; break;
+		case 0x06: printf("Invalid address for quad register");	return NULL; break;
+		case 0x07: printf("Invalid address for quad register");	return NULL; break;
+		case 0x08: regPointer = &state->R8; break;
+		case 0x09: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0a: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0b: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0c: regPointer = &state->R12; break;
+		case 0x0d: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0e: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0f: printf("Invalid address for quad register");	return NULL; break;
+		default: printf("WRONG"); return NULL; break;
+	}
+
+	return regPointer;
+}
+
 
 uint8_t readReg8(uint8_t regCode,State8002* state){
 	return fix_8(*returnByteRegisterPointer(regCode, state));
@@ -256,19 +281,26 @@ uint8_t readReg8(uint8_t regCode,State8002* state){
 uint16_t readReg16(uint8_t regCode,State8002* state){
 	return fix_16(*returnWordRegisterPointer(regCode, state));
 }
-uint8_t readReg32(uint8_t regCode,State8002* state){
+uint32_t readReg32(uint8_t regCode,State8002* state){
 	return fix_32(*returnLongRegisterPointer(regCode, state));
 }
 
+uint64_t readReg64(uint8_t regCode,State8002* state){
+	return fix_64(*returnQuadRegisterPointer(regCode, state));
+}
 
 void writeReg8(uint8_t regCode, State8002* state, uint8_t data){
 	*returnByteRegisterPointer(regCode, state) = data;
 }
 void writeReg16(uint8_t regCode, State8002* state, uint16_t data){
-	*returnWordRegisterPointer(regCode, state) = data;
+	*returnWordRegisterPointer(regCode, state) = fix_16(data);
 }
 void writeReg32(uint8_t regCode, State8002* state, uint32_t data){
-	*returnLongRegisterPointer(regCode, state) = data;
+	*returnLongRegisterPointer(regCode, state) = fix_32(data);
+}
+
+void writeReg64(uint8_t regCode, State8002* state, uint64_t data){
+	*returnQuadRegisterPointer(regCode, state) = data;
 }
 
 void writeZBus(uint16_t address, uint16_t data, State8002* state){
@@ -2627,23 +2659,27 @@ int Emulate8002(State8002* state){
 									uint32_t res = readReg32(field2, state) + (opcode[1] | opcode [2]);
 									writeReg32(field2, state, res);
 									state->pc += 4;
-								} else{ 				//ADDL RRd, @Rs
+								} else{ 			//ADDL RRd, @Rs
 									uint32_t res = readReg32(field2, state);
 									uint16_t offset = readReg16(field1, state);
 									res = res + state->memory[offset];
 									writeReg32(field2, state, res);
 								}
 							} break;
-				case 0x17: {
-								if(filed1 == 0){
+				case 0x17: UnimplementedInstruction(state);	break; //TODO
+				case 0x18: {
+								if(field1 == 0){	//MULTL RQd, #data
+									printf("\n%016x\n", readReg16(field2, state));
 									uint64_t res = readReg64(field2, state) * (opcode[1] | opcode[2]);
 									writeReg64(field2, state, res);
 									state->pc += 4;
-								} else{
-									
+								} else{				//MULTL RQd, @Rs
+									uint64_t res = readReg64(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res * state->memory[offset];
+									writeReg64(field2, state, res);
 								}
-							} break; //TODO
-				case 0x18: UnimplementedInstruction(state); break;
+							} break; break;
 				case 0x19: UnimplementedInstruction(state);	break;
 				case 0x1a: UnimplementedInstruction(state);	break;
 				case 0x1b: UnimplementedInstruction(state);	break;
@@ -2884,7 +2920,7 @@ int Emulate8002(State8002* state){
 	}
 
 	printf("\t");
-	printf("R1: %i, R2: %i, R7: %i, R8: %i  ||| OP: %x\n",state->R1,state->R2,fix_16(state->R7),fix_16(state->R8),upperHalf);
+	printf("R0: %x R1: %x, R2: %x, R3: %x  ||| OP: %x\n",readReg16(0, state), readReg16(1, state), readReg16(2, state),readReg16(3, state),upperHalf);
 
 	if(upperFour == 0xFF){
 		return 1;
