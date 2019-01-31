@@ -2669,7 +2669,6 @@ int Emulate8002(State8002* state){
 				case 0x17: UnimplementedInstruction(state);	break; //TODO
 				case 0x18: {
 								if(field1 == 0){	//MULTL RQd, #data
-									printf("\n%016x\n", readReg16(field2, state));
 									uint64_t res = readReg64(field2, state) * (opcode[1] | opcode[2]);
 									writeReg64(field2, state, res);
 									state->pc += 4;
@@ -2679,59 +2678,180 @@ int Emulate8002(State8002* state){
 									res = res * state->memory[offset];
 									writeReg64(field2, state, res);
 								}
-							} break; break;
-				case 0x19: UnimplementedInstruction(state);	break;
-				case 0x1a: UnimplementedInstruction(state);	break;
-				case 0x1b: UnimplementedInstruction(state);	break;
-				case 0x1c: UnimplementedInstruction(state);	break;
-				case 0x1d: UnimplementedInstruction(state);	break;
-				case 0x1e: UnimplementedInstruction(state); break;
-				case 0x1f: UnimplementedInstruction(state);	break;
-				case 0x20: UnimplementedInstruction(state);	break;
-				case 0x21: UnimplementedInstruction(state); break;
-				case 0x22: UnimplementedInstruction(state);	break;
-				case 0x23: UnimplementedInstruction(state);	break;
-				case 0x24: UnimplementedInstruction(state); break;
-				case 0x25: UnimplementedInstruction(state);	break;
-				case 0x26: UnimplementedInstruction(state);	break;
-				case 0x27: UnimplementedInstruction(state);	break;
-				case 0x28: UnimplementedInstruction(state);	break;
-				case 0x29: UnimplementedInstruction(state);	break;
-				case 0x30: UnimplementedInstruction(state); break;
-				case 0x31: UnimplementedInstruction(state);	break;
-				case 0x32: UnimplementedInstruction(state);	break;
-				case 0x33: UnimplementedInstruction(state); break;
-				case 0x34: UnimplementedInstruction(state);	break;
-				case 0x35: UnimplementedInstruction(state);	break;
-				case 0x36: UnimplementedInstruction(state);	break;
-				case 0x37: UnimplementedInstruction(state);	break;
-				case 0x38: UnimplementedInstruction(state);	break;
-				case 0x39: UnimplementedInstruction(state);	break;
-				case 0x40: { //ADDB, DA or X
-								uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-								state->pc+=2;
-								uint8_t* memptr8 = state->memory;
-
-								if(field1 == 0){	//ADDB (DA)
-									*destinationReg8 = *destinationReg8 + *(memptr8 + opcode[1]); //assuming we only use the top bits
+							} break;
+				case 0x19: {
+								if(field1 == 0){	//MULT RRd, #data
+									uint32_t res = readReg32(field2, state) * opcode[1];
+									writeReg32(field2, state, res);
+									state->pc += 2;
+								} else{				//MULT RRd, @Rs
+									uint32_t res = readReg32(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res * state->memory[offset];
+									writeReg32(field2, state, res);
 								}
-								else{ //ADDB (IR)
-									uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-									*destinationReg8 = *destinationReg8 + *(memptr8 + opcode[1] + *sourceReg8); //assuming we only use the top bits
+							}	break;
+				case 0x1a: {
+								if(field1 == 0){	//DIVL RQd, #data
+									uint64_t res = readReg64(field2, state) / (opcode[1] | opcode[2]);
+									writeReg64(field2, state, res);
+									state->pc += 4;
+								} else{				//DIVL RQd, @Rs
+									uint64_t res = readReg64(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res / state->memory[offset];
+									writeReg64(field2, state, res);
+								}
+							}	break;
+				case 0x1b: {
+								if(field1 == 0){	//DIV RRd, #data
+									uint32_t res = readReg32(field2, state) / opcode[1];
+									writeReg32(field2, state, res);
+									state->pc += 2;
+								} else{				//DIV RRd, @Rs
+									uint32_t res = readReg32(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res / state->memory[offset];
+									writeReg32(field2, state, res);
+								}
+							}	break;
+				case 0x1c: UnimplementedInstruction(state);	break; //TODO
+				case 0x1d: {	//LDL @Rd, RRs
+								uint32_t source = readReg32(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								//writeReg16()
+							}	break;
+				case 0x1e: {	//JP cc, @Rd
+								uint16_t offset = readReg16(field1, state);
+								if(checkConditionCode(field2, state->cc)){
+									state->pc = state->memory[offset];
 								}
 							} break;
-				case 0x41: {//ADD, DA or X
-								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-								state->pc+=2;
-								uint16_t* memptr16 = state->memory;
+				case 0x1f: {	//CALL @Rd
+								uint16_t dest = readReg16(field1, state);
+								state->sp -= 2;
+								state->memory[state->sp] = state->pc;
+								state->pc = dest;
+							}	break;
+				case 0x20: {
+								if(field1 == 0){	//LDB Rbd, #data
+									if(field2 <= 7){
+										writeReg8(field2, state, opcode[1]>>8); //Higher
+									} else{
+										writeReg8(field2, state, opcode[1]);	//Lower
+									}
+									state->pc += 2;
+								} else{				//LDB Rbd, @Rs
+									uint16_t offset = readReg16(field1, state);
+									writeReg8(field2, state, state->memory[offset]);
+								}
+							}	break;
+				case 0x21: {
+								if(field1 == 0){	//LD Rd, #data
+									writeReg16(field2, state, opcode[1]);
+									state->pc += 2;
+								} else{				//Ld Rd, @Rs
+									uint16_t offset = readReg16(field1, state);
+									writeReg16(field2, state, state->memory[offset]);
+								}
+							} break;
+				case 0x22: {	//TODO
+								if(field1 == 0){
+									uint16_t offset = readReg16(field1, state);
+									uint16_t temp = state->memory[offset];
+								} else{
 
-								if(field1 == 0){	//ADD (DA)
-									*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*(memptr16 + opcode[1]))); //assuming we only use the top bits
 								}
-								else{ //ADD (IR)
-									uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
-									*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*(memptr16 + opcode[1] + fix_16(*sourceReg16)))); //assuming we only use the top bits
+							}	break;
+				case 0x23: {	//TODO
+								if(field1 == 0){
+
+								} else{
+
 								}
+							}	break;
+				case 0x24: UnimplementedInstruction(state); break; //TODO
+				case 0x25: UnimplementedInstruction(state);	break; //TODO
+				case 0x26: UnimplementedInstruction(state);	break; //TODO
+				case 0x27: UnimplementedInstruction(state);	break; //TODO
+				case 0x28: {	//INCB @Rd, #n
+								uint16_t offset = readReg16(field1);
+								//WRITE MEMORY
+							}	break;
+				case 0x29: UnimplementedInstruction(state);	break; //TODO
+				case 0x2a: UnimplementedInstruction(state);	break; //TODO
+				case 0x2b: UnimplementedInstruction(state);	break; //TODO
+				case 0x2c: {	//EXB Rbd, @Rs
+								uint8_t dest = readReg8(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								uint16_t temp = state->memory[offset];
+								state->memory[offset] = temp; //TODO?
+								writeReg8(field2, state, temp);
+							}	break; 
+				case 0x2d: {	//EX Rd, @Rs
+								uint16_t dest = readReg16(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								uint16_t temp = state->memory[offset];
+								state->memory[offset] = temp; //TODO?
+								writeReg16(field2, state, temp);
+							}	break; 
+				case 0x2e: {	//LDB @Rd, Rbs
+								uint8_t source = readReg8(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								state->memory[offset] = source; //TODO?
+							}	break;
+				case 0x2f: {	//LD @Rd, Rs
+								uint16_t source = readReg16(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								state->memory[offset] = source; //TODO?
+							}	break;
+				case 0x30: UnimplementedInstruction(state); break; //TODO
+				case 0x31: UnimplementedInstruction(state);	break; //TODO
+				case 0x32: UnimplementedInstruction(state);	break; //TODO
+				case 0x33: UnimplementedInstruction(state); break; //TODO
+				case 0x34: UnimplementedInstruction(state);	break; //TODO
+				case 0x35: UnimplementedInstruction(state);	break; //TODO
+				case 0x36: break;
+				case 0x37: UnimplementedInstruction(state);	break; //TODO
+				case 0x38: break;
+				case 0x39: {	//TODO
+								if(field2 == 0){
+
+								} else{
+
+								}
+							}	break;
+				case 0x3a: UnimplementedInstruction(state); break; //TODO?
+				case 0x3b: UnimplementedInstruction(state); break; //TOOD?
+				case 0x3c: UnimplementedInstruction(state); break; //TODO?
+				case 0x3d: UnimplementedInstruction(state); break; //TODO?
+				case 0x3e: UnimplementedInstruction(state); break; //TOOD?
+				case 0x3f: UnimplementedInstruction(state); break; //TODO?
+				case 0x40: { //ADDB, DA or X
+								if(field1 == 0){	//ADDB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									res += state->memory[opcode[1]];
+									writeReg8(field2, state, res);
+								} else{				//ADDB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res += state->memory[offset + opcode[1]];
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
+							} break;
+				case 0x41: {//ADD, DA or X
+								if(field1 == 0){	//ADD Rd, address
+									uint16_t res = readReg16(field2, state);
+									res += state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{ 			//ADD Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res += state->memory[offset + opcode[1]];
+									writeReg16(field2, state, res);
+								}
+								state->pc += 2;
 							} break;
 				case 0x42: UnimplementedInstruction(state);	break;
 				case 0x43: UnimplementedInstruction(state);	break;
@@ -2927,8 +3047,6 @@ int Emulate8002(State8002* state){
 	}
 	return done;
 }
-
-
 
 void ReadFileIntoMemoryAt(State8002* state, char* filename, uint32_t offset){
 	FILE *f= fopen(filename, "rb");
