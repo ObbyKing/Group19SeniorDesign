@@ -1450,7 +1450,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 									} break;
 						case 0x5f:	switch(field1){
-										case 0x00:	printf("CALL %04x", code[1]);		//CALL address
+										case 0x00:	printf("CALL %04x\t", code[1]);		//CALL address
 													opwords = 2;
 													break;
 										default:	printf("CALL %04x(", code[1]);		//CALL address(Rd)
@@ -1681,7 +1681,6 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									findRegister(field2);
 									printf(", ");
 									findRegister(field1);
-									printf("\t");
 									break;
 						case 0x82:	printf("SUBB ");						//SUBB Rbd, Rbs
 									findregRegister(field2);
@@ -1732,7 +1731,6 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									findRegister(field2);
 									printf(", ");
 									findRegister(field1);
-									printf("\t");
 									break;
 						case 0x8c:	switch(field2){
 										case 0x00:	printf("COMB ");		//COMB Rbd
@@ -1855,8 +1853,10 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 						case 0x9d:	printf("NOP");							//NO INSTRUCTION
 									break;
 						case 0x9e:	switch(field1){
-										case 0x00:	printf("RET %02x", field2);	//RET cc
+										case 0x00:	printf("RET %01x\t", field2);	//RET cc
+													break;
 										default:	printf("How did you get here?");
+													break;
 									} break;
 						case 0x9f:	printf("NOP");							//NO INSTRUCTION
 									break;
@@ -1869,6 +1869,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									findRegister(field2);
 									printf(", ");
 									findRegister(field1);
+									printf("\t");
 									break;
 						case 0xa2:	printf("RESB ");						//RESB Rbd, #b
 									findregRegister(field1);
@@ -2396,6 +2397,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 						default: printf("%02x not implemented in dissasembler", upperHalf); break;
 					} break;
 	}
+	printf("\t");
 	return opwords;
 }
 
@@ -2462,7 +2464,11 @@ int Emulate8002(State8002* state){
 								else{ 				// ADDB Rbd, @Rs
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res += state->memory[offset];
+									if(field2 <= 7){
+										res += state->memory[offset] >> 8; //Higher
+									} else{
+										res += state->memory[offset]; //Lower
+									}
 									writeReg8(field2, state, res);
 								}
 							} break;
@@ -2470,6 +2476,7 @@ int Emulate8002(State8002* state){
 								if(field1 == 0){	//ADD Rd, #data
 									uint16_t res = readReg16(field2, state) + opcode[1];
 									writeReg16(field2, state, res);
+									state->cc.c = (readReg16(field2, state) + opcode[1] > 0xffff);
 									state->pc += 2;
 								}
 								else{ 				//ADD Rd, @Rs
@@ -2492,7 +2499,11 @@ int Emulate8002(State8002* state){
 								} else {			//SUBB Rbd, @Rs
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res -= state->memory[offset];
+									if(field2 <= 7){
+										res -= state->memory[offset] >> 8; //Higher
+									} else{
+										res -= state->memory[offset];	//Lower
+									}
 									writeReg8(field2, state, res);
 								}
 							} break;
@@ -2521,7 +2532,11 @@ int Emulate8002(State8002* state){
 								} else{				//ORB Rbd, @Rs
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res | state->memory[offset];
+									if(field2 <= 7){
+										res = res | (state->memory[offset] >> 8); //Higher
+									} else{
+										res = res | state->memory[offset];	//Lower
+									}
 									writeReg8(field2, state, res);
 								}
 							} break;
@@ -2550,7 +2565,11 @@ int Emulate8002(State8002* state){
 								} else{				//ANDB Rbd, @Rs
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res & state->memory[offset];
+									if(field2 <= 7){
+										res = res & (state->memory[offset] >> 8);	//Higher
+									} else {
+										res = res & state->memory[offset];	//Lower
+									}
 									writeReg8(field2, state, res);
 								}
 							}	break;
@@ -2579,7 +2598,11 @@ int Emulate8002(State8002* state){
 								} else{				//XORB Rbd, @Rs
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res ^ state->memory[offset];
+									if(field2 <= 7){
+										res = res ^ (state->memory[offset] >> 8);	//Higher
+									} else{
+										res = res ^ state->memory[offset];	//Lower
+									}
 									writeReg8(field2, state, res);
 								}
 							}	break;
@@ -2775,7 +2798,7 @@ int Emulate8002(State8002* state){
 				case 0x26: UnimplementedInstruction(state);	break; //TODO
 				case 0x27: UnimplementedInstruction(state);	break; //TODO
 				case 0x28: {	//INCB @Rd, #n
-								uint16_t offset = readReg16(field1);
+								uint16_t offset = readReg16(field1, state);
 								//WRITE MEMORY
 							}	break;
 				case 0x29: UnimplementedInstruction(state);	break; //TODO
@@ -2826,7 +2849,12 @@ int Emulate8002(State8002* state){
 				case 0x3c: UnimplementedInstruction(state); break; //TODO?
 				case 0x3d: UnimplementedInstruction(state); break; //TODO?
 				case 0x3e: UnimplementedInstruction(state); break; //TOOD?
-				case 0x3f: UnimplementedInstruction(state); break; //TODO?
+				case 0x3f: {	//CALL @Rd
+								uint16_t offset = readReg16(field1, state);
+								state->sp -= 2;
+								state->memory[state->sp] = state->pc;
+								state->pc = offset;	//Not entirely sure what gets stored for call
+							} break;
 				case 0x40: { //ADDB, DA or X
 								if(field1 == 0){	//ADDB Rbd, address
 									uint8_t res = readReg8(field2, state);
@@ -2894,7 +2922,18 @@ int Emulate8002(State8002* state){
 				case 0x5c: UnimplementedInstruction(state);	break;
 				case 0x5d: UnimplementedInstruction(state); break;
 				case 0x5e: UnimplementedInstruction(state);	break;
-				case 0x5f: UnimplementedInstruction(state);	break;
+				case 0x5f: {	
+								if(field1 == 0){	//CALL address
+									state->sp -= 2;
+									state->memory[state->sp] = state->pc;
+									state->pc = opcode[1];
+								} else{				//CALL address(Rd)
+									uint16_t offset = readReg16(field1, state);
+									state->pc -= 2;
+									state->memory[state->sp] = state->pc;
+									state->pc = state->memory[offset];	//TODO?
+								}
+							}	break;
 				case 0x60: UnimplementedInstruction(state); break;
 				case 0x61: UnimplementedInstruction(state);	break;
 				case 0x62: UnimplementedInstruction(state);	break;
@@ -3000,10 +3039,18 @@ int Emulate8002(State8002* state){
 				case 0x9b: UnimplementedInstruction(state);	break;
 				case 0x9c: UnimplementedInstruction(state); break;
 				case 0x9d: UnimplementedInstruction(state);	break;
-				case 0x9e: UnimplementedInstruction(state);	break;
+				case 0x9e: {	//RET cc
+								if(checkConditionCode(field2, state->cc)){
+									state->pc = state->memory[state->sp];
+								}
+								state->sp += 2;
+							}	break;
 				case 0x9f: UnimplementedInstruction(state); break;
 				case 0xa0: UnimplementedInstruction(state);	break;
-				case 0xa1: UnimplementedInstruction(state);	break;
+				case 0xa1: {	//LD Rd, Rs
+								uint16_t source = readReg16(field1, state);
+								writeReg16(field2, state, source);
+							}	break;
 				case 0xa2: UnimplementedInstruction(state);	break;
 				case 0xa3: UnimplementedInstruction(state);	break;
 				case 0xa4: UnimplementedInstruction(state);	break;
@@ -3039,8 +3086,8 @@ int Emulate8002(State8002* state){
 		}
 	}
 
-	printf("\t");
-	printf("R0: %x R1: %x, R2: %x, R3: %x  ||| OP: %x\n",readReg16(0, state), readReg16(1, state), readReg16(2, state),readReg16(3, state),upperHalf);
+	//printf("\t");
+	printf("R0: %x R1: %x, R2: %x, R3: %x, SP: %x  ||| OP: %x\n",readReg16(0, state), readReg16(1, state), readReg16(2, state),readReg16(3, state), readReg16(15, state),upperHalf);
 
 	if(upperFour == 0xFF){
 		return 1;
