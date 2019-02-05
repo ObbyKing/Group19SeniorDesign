@@ -2858,20 +2858,27 @@ int Emulate8002(State8002* state){
 				case 0x40: { //ADDB, DA or X
 								if(field1 == 0){	//ADDB Rbd, address
 									uint8_t res = readReg8(field2, state);
-									res += state->memory[opcode[1]];
+									if(field2 <= 7){
+										res += state->memory[opcode[1]] >> 8;			//Higher
+									} else{
+										res += state->memory[opcode[1]];				//Lower
+									}
 									writeReg8(field2, state, res);
 								} else{				//ADDB Rbd, addr(Rs)
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res += state->memory[offset + opcode[1]];
+									if(field2 <= 7){
+										res += state->memory[offset + opcode[1]] >> 8;	//Higher
+									} else{
+										res += state->memory[offset + opcode[1]];		//Lower
+									}
 									writeReg8(field2, state, res);
 								}
 								state->pc += 2;
 							} break;
 				case 0x41: {//ADD, DA or X
 								if(field1 == 0){	//ADD Rd, address
-									uint16_t res = readReg16(field2, state);
-									res += state->memory[opcode[1]];
+									uint16_t res = readReg16(field2, state) + state->memory[opcode[1]];
 									writeReg16(field2, state, res);
 								} else{ 			//ADD Rd, addr(Rs)
 									uint16_t res = readReg16(field2, state);
@@ -2881,15 +2888,150 @@ int Emulate8002(State8002* state){
 								}
 								state->pc += 2;
 							} break;
-				case 0x42: UnimplementedInstruction(state);	break;
-				case 0x43: UnimplementedInstruction(state);	break;
-				case 0x44: UnimplementedInstruction(state);	break;
-				case 0x45: UnimplementedInstruction(state);	break;
-				case 0x46: UnimplementedInstruction(state);	break;
-				case 0x47: UnimplementedInstruction(state);	break;
-				case 0x48: UnimplementedInstruction(state); break;
-				case 0x49: UnimplementedInstruction(state);	break;
-				case 0x4a: UnimplementedInstruction(state);	break;
+				case 0x42: {
+								if(field1 == 0){	//SUBB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res -= state->memory[opcode[1]] >> 8;			//Higher
+									} else{
+										res -= state->memory[opcode[1]];				//Lower
+									}
+									writeReg8(field2, state, res);
+								} else{				//SUBB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res -= state->memory[opcode[1] + offset] >> 8;	//Higher
+									} else{
+										res -= state->memory[opcode[1] + offset];		//Lower
+									}	
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x43: {	
+								if(field1 == 0){	//SUB Rd, address
+									uint16_t res = readReg16(field2, state) - state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{				//SUB Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res -= state->memory[opcode[1] + offset];
+									writeReg16(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x44: {
+								if(field1 == 0){	//ORB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res = res | (state->memory[opcode[1]] >> 8);	//Higher
+									} else{
+										res = res | state->memory[opcode[1]];			//Lower
+									}
+									writeReg8(field2, state, res);
+								} else{				//ORB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res = res | (state->memory[offset + opcode[1]] >> 8);	//Higher
+									} else{
+										res = res | state->memory[offset + opcode[1]];	//Lower
+									}
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x45: {
+								if(field1 == 0){	//OR Rd, address
+									uint16_t res = readReg16(field2, state) | state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{				//OR Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res | state->memory[offset + opcode[1]];
+									writeReg16(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x46: {
+								if(field1 == 0){	//ANDB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res = res & (state->memory[opcode[1]] >> 8);	//Higher
+									} else{
+										res = res & state->memory[opcode[1]];			//Lower
+									}
+									writeReg8(field2, state, res);
+								} else{				//ANDB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res = res & (state->memory[offset + opcode[1]] >> 8);	//Higher
+									} else{
+										res = res & state->memory[offset + opcode[1]];	//Lower
+									}
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x47: {
+								if(field1 == 0){	//AND Rd, address
+									uint16_t res = readReg16(field2, state) & state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{				//AND Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res & state->memory[offset + opcode[1]];
+									writeReg16(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x48: {
+								if(field1 == 0){	//XORB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res = res ^ (state->memory[opcode[1]] >> 8);
+									} else{
+										res = res ^ state->memory[opcode[1]];
+									}
+									writeReg8(field2, state, res);
+								} else{				//XORB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res = res ^ (state->memory[offset + opcode[1]] >> 8);
+									} else{
+										res = res ^ state->memory[offset + opcode[1]];
+									}
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
+							} break;
+				case 0x49: {
+								if(field1 == 0){	//XOR Rd, address
+									uint16_t res = readReg16(field2, state) ^ state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{				//XOR Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res ^ state->memory[offset + opcode[1]];
+									writeReg16(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x4a: {
+								if(field1 == 0){
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res -= state->memory[opcode[1]] >> 8;
+									} else{
+										res -= state->memory[opcode[1]];
+									}
+								} else{
+
+								}
+							}	break;
 				case 0x4b: UnimplementedInstruction(state); break;
 				case 0x4c: UnimplementedInstruction(state);	break;
 				case 0x4d: UnimplementedInstruction(state);	break;
