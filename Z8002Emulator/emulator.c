@@ -10,6 +10,54 @@ typedef int bool;
 #define true 1
 #define false 0
 
+uint8_t readReg8(uint8_t regCode,State8002* state){
+	return fix_8(*returnByteRegisterPointer(regToFind, state));
+}
+uint16_t readReg16(uint8_t regCode,State8002* state){
+	return fix_16(*returnByteRegisterPointer(regToFind, state));
+}
+uint32_t readReg32(uint8_t regCode,State8002* state){
+	return fix_32(*returnByteRegisterPointer(regToFind, state));
+}
+
+void writeReg8(uint8_t regCode, State8002* state, uint8_t data){
+	*returnByteRegisterPointer(regToFind, state)) = fix_8(data);
+}
+void writeReg16(uint8_t regCode, State8002* state, uint16_t data){
+	*returnByteRegisterPointer(regToFind, state)) = fix_16(data);
+}
+void writeReg32(uint8_t regCode, State8002* state, uint32_t data){
+	*returnByteRegisterPointer(regToFind, state)) = fix_32(data);
+}
+
+uint16_t readMem(uint16_t address, State8002* state, Pins8002 pins){
+	pins->addressStrobe = 0;
+	pins->readWrite = 1;
+	writeZBus(address, pins);
+	pins->addressStrobe = 1;
+	pins->memoryREQ = 0;
+	void zBusMemRead(state,pins);
+	pins->dataStrobe = 0;
+	return readZBus(pins);
+	pins->memoryREQ = 1;
+	pins->dataStrobe = 1;
+}
+void writeMem(uint16_t address, uint16_t data, State8002* state, Pins8002 pins){
+	pins->addressStrobe = 0;
+	pins->readWrite = 0;
+	writeZBus(address, pins);
+	pins->addressStrobe = 1;
+	pins->memoryREQ = 0;
+	void zBusMemWrite(data,state,pins){
+	}
+
+}
+
+void clock(){
+
+}
+
+
 uint8_t fix_8(uint8_t i){
 	return i;
 }
@@ -25,9 +73,6 @@ uint64_t fix_64(uint64_t i){
 	return ((uint64_t)htonl(lowerHalf) << 32) + (uint64_t)htonl(upperHalf);
 }
 
-
-
-
 typedef struct ConditionCodes {
 	uint8_t		c; // Carry flag
 	uint8_t		z; // Zero flag
@@ -36,8 +81,6 @@ typedef struct ConditionCodes {
 	uint8_t		d; // Decimal adjust flah
 	uint8_t		h; // Half carry flag
 } ConditionCodes;
-
-
 
 typedef	struct State8002{
 	uint16_t	R0;
@@ -55,22 +98,64 @@ typedef	struct State8002{
 	uint16_t 	R12;
 	uint16_t	R13;
 	uint16_t 	R14;
-	uint16_t 	sp;	// Register 15 is the stack pointer
+
+
 	uint16_t	pc; // Program counter
 	struct ConditionCodes* cc;
 
-	uint16_t 	*dataSpaceNM; // 64k memory space the Z8002 does not use segmented mode
-	uint16_t 	*dataSpaceSM; // 64k memory space the Z8002 does not use segmented mode
-	uint16_t 	*instructionSpaceNM; // 64k memory space the Z8002 does not use segmented mode
-	uint16_t 	*instructionSpaceSM; // 64k memory space the Z8002 does not use segmented mode
-	uint16_t 	*stackNM; // 64k memory space the Z8002 does not use segmented mode
-	uint16_t 	*stackSM; // 64k memory space the Z8002 does not use segmented mode
+	uint8_t 	*dataSpace_NM; // 64k memory space the Z8002 does not use segmented mode
+	uint8_t 	*dataSpace_SM; // 64k memory space the Z8002 does not use segmented mode
+	uint8_t 	*instructionSpace_NM; // 64k memory space the Z8002 does not use segmented mode
+	uint8_t 	*instructionSpace_SM; // 64k memory space the Z8002 does not use segmented mode
+	uint8_t 	*stack_NM; // 64k memory space the Z8002 does not use segmented mode
+	uint8_t 	*stack_SM; // 64k memory space the Z8002 does not use segmented mode
 
-	uint16_t 	*memory; // 64k memory space the Z8002 does not use segmented mode
-	uint16_t 	*memory; // 64k memory space the Z8002 does not use segmented mode
+	uint16_t 	sp_NM;	// Register 15 is the stack pointer, there are two, for system and normal mode
+	uint16_t 	sp_SM;	// Register 15 is the stack pointer
+
 	uint8_t status;
+	uint8_t NVIE;
+	uint8_t VIE;
+	uint8_t systemNormal;
+	uint8_t EPA = 0;// unused by us
+	uint8_t SEG = 0; // unused by us
+
+	uint16_t FCW;
 
 } State8002;
+typedef struct Pins8002{
+	uint8_t addressStrobe;
+	uint8_t dataStrobe;
+	uint8_t memoryREQ;
+
+	uint8_t readWrite;
+	uint8_t normalSystem;
+	uint8_t byteWord;
+	uint8_t status;
+	uint8_t wait;
+	uint8_t stop;
+
+	uint8_t vectorInterupt;
+	uint8_t nonVectorInterupt;
+
+	uint16_t dataBus;
+}
+
+void updateFCW(State8002 state){
+	state->FCW = \
+	(state->cc.h << 2) +
+	(state->cc.d << 3) +
+	(state->cc.p << 4) +
+	(state->cc.s << 5) +
+	(state->cc.z << 6) +
+	(state->cc.c << 7) +
+	(state->NVIE << 11) +
+	(state->VIE << 12) +
+	(state->EPA << 13) +
+	(state->systemNormal << 14) +
+	(state->SEG << 15);
+
+}
 
 bool checkConditionCode(uint8_t cc,ConditionCodes o){
 	cc = cc & 0x0F;
@@ -104,7 +189,6 @@ int parity(int x, int size){
 	}
 	return (0 == (p & 0x1));
 }
-
 void findregRegister(uint8_t regToFind){
 	switch(regToFind){
 		case 0x00: printf("RH0"); break;
@@ -127,7 +211,6 @@ void findregRegister(uint8_t regToFind){
 	}
 	return;
 }
-
 void findRegister(uint8_t regToFind){
 	switch(regToFind){
 		case 0x00: printf("R0"); break;
@@ -149,7 +232,6 @@ void findRegister(uint8_t regToFind){
 	}
 	return;
 }
-
 void findLongRegister(uint8_t regToFind){
 	switch(regToFind){
 		case 0x00: printf("RR0"); break;
@@ -164,7 +246,6 @@ void findLongRegister(uint8_t regToFind){
 	}
 	return;
 }
-
 void findQuadRegister(uint8_t regToFind){
 	switch(regToFind){
 		case 0x00: printf("RQ0"); break;
@@ -175,7 +256,6 @@ void findQuadRegister(uint8_t regToFind){
 	}
 	return;
 }
-
 
 uint8_t* returnByteRegisterPointer(uint8_t regToFind, State8002* state){
 	uint8_t* regPointer;
@@ -250,50 +330,168 @@ uint32_t* returnLongRegisterPointer(uint8_t regToFind, State8002* state){
 }
 
 
-uint8_t readReg8(uint8_t regCode,State8002* state){
-	return fix_8(*returnByteRegisterPointer(regToFind, state));
+
+// void writeZBus(uint16_t data, State8002* state){
+// 	uint8_t status = state->status;
+// 	if (status = 0b1000) { // data space normal mode
+// 		uint16_t* actualAddress = &state->dataSpace_NM + address;
+// 		*actualAddress = data;
+// 	}
+// 	if (status = 0b1010) { // data space normal mode
+// 		uint16_t* actualAddress = &state->dataSpace_SM + address;
+// 		*actualAddress = data;
+// 	}
+// }
+// uint16_t readZBus(uint16_t data, State8002* state){
+// 	uint8_t status = state->status;
+// 	if (status = 0b1000) { // data space normal mode
+// 		uint16_t* actualAddress = &state->dataSpace_NM + address;
+// 		*actualAddress = data;
+// 	}
+// 	if (status = 0b1010) { // data space normal mode
+// 		uint16_t* actualAddress = &state->dataSpace_SM + address;
+// 		*actualAddress = data;
+// 	}
+// }
+// void writeZBus(uint16_t data, Pins8002 pins){
+// 	uint8_t status = state->status;
+//
+// 	if (status = 0b1000) { // data space normal mode
+// 		uint16_t* actualAddress = &state->dataSpace_NM + address;
+// 		*actualAddress = data;
+// 	}
+// 	if (status = 0b1010) { // data space normal mode
+// 		uint16_t* actualAddress = &state->dataSpace_SM + address;
+// 		*actualAddress = data;
+// 	}
+// }
+void writeZBus(uint16_t data, Pins8002 pins){
+	pins->dataBus = data;
 }
-uint16_t readReg16(uint8_t regCode,State8002* state){
-	return fix_16(*returnByteRegisterPointer(regToFind, state));
+uint16_t readZBus(Pins8002 pins){
+	return pins->dataBus;
 }
-uint8_t readReg32(uint8_t regCode,State8002* state){
-	return fix_32(*returnByteRegisterPointer(regToFind, state));
+
+void zBusMemRead(State8002 state, Pins8002 pins){ //zbus mem request
+	uint8_t status = pins->status;
+	uint8_t evenOdd = pins->dataBus % 2;
+	if(pins->readWrite == 1 && pins->memoryREQ == 0){// memory request, read into processor
+		if(evenOdd == 1) // makes all addresses even, puts 16 bits in the register, then masks if byteWord is high
+			pins->dataBus += 1;
+
+		if(pins->normalSystem == 1){
+				switch (status){
+					case 0b1000:{// data memory
+						pins->dataBus = fix_16(state->dataSpace_NM[pins->dataBus]);
+					}
+					case 0b1001:{// stack memory
+						pins->dataBus = fix_16(state->stack_NM[pins->dataBus]);
+					}
+					case 0b1100:{// instruction memory
+						pins->dataBus = fix_16(state->instructionSpace_NM[pins->dataBus]);
+					}
+				}
+			}
+		else if(pins->normalSystem == 0){
+				switch (status){
+					case 0b1000:{// data memory
+						pins->dataBus = fix_16(state->dataSpace_SM[pins->dataBus]);
+					}
+					case 0b1001:{// stack memory
+						pins->dataBus = fix_16(state->stack_SM[pins->dataBus]);
+					}
+					case 0b1100:{// instruction memory
+						pins->dataBus = fix_16(state->instructionSpace_SM[pins->dataBus]);
+					}
+				}
+			}
+		if(pins->byteWord == 1){ //mask for byte
+			if(evenOdd == 1){
+				pins->dataBus = pins->dataBus & 0xFF00;
+			}
+			if(evenOdd == 0){
+				pins->dataBus = pins->dataBus & 0x00FF;
+			}
+		}
+
+	}
+}
+void zBusMemWrite(uint16_t data,State8002 state, Pins8002 pins){
+	uint8_t status = pins->status;
+	uint8_t evenOdd = pins->dataBus % 2;
+	uint16_t address = pins->dataBus;
+	pins->dataBus = fix_16(data);
+	pins->dataStrobe = 0;
+	if(pins->readWrite == 0 && pins->memoryREQ == 0){// memory request, read into processor
+		if(pins->byteWord = 0){
+			if(pins->normalSystem == 1){
+					switch (status){
+						case 0b1000:{// data memory
+							state->dataSpace_NM[address] = pins->dataBus;
+						}
+						case 0b1001:{// stack memory
+							state->stack_NM[address] = pins->dataBus;
+						}
+						case 0b1100:{// instruction memory
+							state->instructionSpace_NM[address] = pins->dataBus;
+						}
+					}
+				}
+			else if(pins->normalSystem == 0){
+					switch (status){
+						case 0b1000:{// data memory
+							state->dataSpace_SM[address] = pins->dataBus;
+						}
+						case 0b1001:{// stack memory
+							state->stack_SM[address] = pins->dataBus;
+						}
+						case 0b1100:{// instruction memory
+							state->instructionSpace_SM[address] = pins->dataBus;
+						}
+					}
+				}
+		}
+		if(pins->byteWord == 1){
+			if (evenOdd = 1) {
+				pins->dataBus = data << 8;
+			}
+			else{
+				pins->databus = data & 0x00FF;
+			}
+			uint8_t datatemp = data & 0x00FF;
+
+			if(pins->normalSystem == 1){
+					switch (status){
+						case 0b1000:{// data memory
+							state->dataSpace_NM[address] = datatemp;
+						}
+						case 0b1001:{// stack memory
+							state->stack_NM[address] = datatemp;
+						}
+						case 0b1100:{// instruction memory
+							state->instructionSpace_NM[address] = datatemp;
+						}
+					}
+				}
+			else if(pins->normalSystem == 0){
+					switch (status){
+						case 0b1000:{// data memory
+							state->dataSpace_SM[address] = datatemp;
+						}
+						case 0b1001:{// stack memory
+							state->stack_SM[address] = datatemp;
+						}
+						case 0b1100:{// instruction memory
+							state->instructionSpace_SM[address] = datatemp;
+						}
+					}
+				}
+		}
+
+	}
 }
 
 
-void writeReg8(uint8_t regCode, State8002* state, uint8_t data){
-	*returnByteRegisterPointer(regToFind, state)) = fix_8(data);
-}
-void writeReg16(uint8_t regCode, State8002* state, uint16_t data){
-	*returnByteRegisterPointer(regToFind, state)) = fix_16(data);
-}
-void writeReg32(uint8_t regCode, State8002* state, uint32_t data){
-	*returnByteRegisterPointer(regToFind, state)) = fix_32(data);
-}
-
-void writeZBus(uint16_t address, uint16_t data, State8002* state){
-	uint8_t status = state->status;
-	if (status = 0b1000) { // data space normal mode
-		uint16_t* actualAddress = &state->dataSpaceNM + address;
-		*actualAddress = data;
-	}
-	if (status = 0b1010) { // data space normal mode
-		uint16_t* actualAddress = &state->dataSpaceSM + address;
-		*actualAddress = data;
-	}
-}
-
-uint16_t readZBus(uint16_t address, uint16_t data, State8002* state){
-	uint8_t status = state->status;
-	if (status = 0b1000) { // data space normal mode
-		uint16_t* actualAddress = &state->dataSpaceNM + address;
-		*actualAddress = data;
-	}
-	if (status = 0b1010) { // data space normal mode
-		uint16_t* actualAddress = &state->dataSpaceSM + address;
-		*actualAddress = data;
-	}
-}
 
 void UnimplementedInstruction(State8002* state){
 	//pc will have advanced one, so undo that
@@ -303,7 +501,6 @@ void UnimplementedInstruction(State8002* state){
 	printf("\n");
 	exit(1);
 }
-
 int Disassemble8002(uint16_t *codebuffer, int pc){
 	uint16_t *code = &codebuffer[pc/2];
 
@@ -2376,8 +2573,33 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 	return opwords;
 }
 
+void pushNorm(uint16_t data,State8002* state){
+	state->sp_NM += -2;
+	state->stack_NM[sysSP] = fix_16(data);
+}
+uint16_t popNorm(State8002* state){
+	state->sp_NM += 2;
+	return fix_16(state->stack_NM[sysSP-2]);
+}
+void pushSys(uint16_t data,State8002* state){
+	state->sp_SM += -2;
+	state->stack_SM[sysSP] = fix_16(data);
+}
+uint16_t popSys(State8002* state){
+	state->sp_SM += 2;
+	return fix_16(state->stack_SM[sysSP-2]);
+}
+
+void systemCall(State8002 state, uint16_t identifier){
+	pushSys(state->pc, state);
+	updateFCW(state);
+	pushSys(state->FCW);
+	pushSys(identifier);
+	state->systemNormal = 1;
+}
 int Emulate8002(State8002* state){
-	uint16_t *opcode = &state->memory[state->pc];
+
+
 
 	int done = 0;
 
@@ -2865,9 +3087,6 @@ int Emulate8002(State8002* state){
 	}
 	return done;
 }
-
-
-
 void ReadFileIntoMemoryAt(State8002* state, char* filename, uint32_t offset){
 	FILE *f= fopen(filename, "rb");
 	if(f==NULL){
@@ -2879,17 +3098,17 @@ void ReadFileIntoMemoryAt(State8002* state, char* filename, uint32_t offset){
 	fseek(f, 0L, SEEK_SET);
 
 
-	uint8_t *buffer = &state->memory[offset];
+	uint8_t *buffer = &state->instructionSpace_NM[offset];
 	fread(buffer, fsize, 1, f);
 	fclose(f);
-	uint16_t *memptr = &state->memory[offset];
+	uint16_t *memptr = &state->instructionSpace_NM[offset];
 
 	for(uint16_t i = 0; i < fsize/2; i++){
 	 	memptr[i] = buffer[i*2+1] + (buffer[i*2] << 8);
 	}
 }
 
-State8002* Init8002(void){
+State8002* InitState(void){
 	State8002* state = calloc(1, sizeof(State8002));
 	// state->cc = calloc(1,sizeof(ConditionCodes));
 	// state->cc.c = 1;
@@ -2898,11 +3117,24 @@ State8002* Init8002(void){
 	// state->cc.z = 1;
 	// state->cc.d = 1;
 	// state->cc.h = 1;
-	state->memory = malloc(0x10000); // 64k
 
 
 
+	state->pc = 0;
+	state->dataSpace_NM = malloc(0x10000); // 64k
+	state->dataSpace_SM = malloc(0x10000); // 64k
+	state->instructionSpace_NM = malloc(0x10000);
+	state->instructionSpace_SM = malloc(0x10000);
+	state->stack_NM = malloc(0x10000);
+	state->stack_SM = malloc(0x10000);
+	state->sys_SP = 0x10000;
+	state->norm_SP = 0x10000;
 
+	state->SN = 0;
+	state->NS = 1;
+	state->NVIE = 0;
+	state->VIE = 0;
+	state->EPA = 0;
 	// uint8_t *p8 = &state->R0 + 0x0000;
 	// uint16_t *p16 = &state->R0 + 0x0000;
 	// uint32_t *p32 = &state->R0 + 0x0000;
@@ -2929,14 +3161,43 @@ State8002* Init8002(void){
 	return state;
 }
 
+Pins8002* InitPins(void){
+	Pins8002* pins = calloc(1, sizeof(Pins8002));
+	pins->addressStrobe = 1;
+	pins->dataStrobe = 1;
+	pins->memoryREQ = 1;
+
+	pins->readWrite = 1;
+	pins->normalSystem = 1;
+	pins->byteWord = 0;
+	pins->status = 0b0000;
+	pins->wait = 1;
+	pins->stop = 1;
+
+	pins->vectorInterupt = 1;
+	pins->nonVectorInterupt = 1;
+
+	pins->dataBus = 0x000;
+
+	return pins;
+}
+
 int main (int argc, char**argv){
 	int done = 0;
-	State8002* state = Init8002();
+	State8002* state = InitState();
+	Pins8002* pins = InitPins();writeZBus(address, pins);
 
 	ReadFileIntoMemoryAt(state, "testFormat.t", 0);
 	//ReadFileIntoMemoryAt(state, "jr.t", 2);
+	pins->status = 0b1100;
+
 	while (done == 0){
+
+
+		readMem(state->pc,state)
+
 		done = Emulate8002(state);
+
 	}
 	return 0;
 }
