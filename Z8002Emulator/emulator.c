@@ -101,7 +101,7 @@ typedef	struct State8002{
 
 
 	uint16_t	pc; // Program counter
-	struct ConditionCodes* cc;
+	struct ConditionCodes cc;
 
 	uint8_t 	*dataSpace_NM; // 64k memory space the Z8002 does not use segmented mode
 	uint8_t 	*dataSpace_SM; // 64k memory space the Z8002 does not use segmented mode
@@ -260,7 +260,7 @@ void findQuadRegister(uint8_t regToFind){
 uint8_t* returnByteRegisterPointer(uint8_t regToFind, State8002* state){
 	uint8_t* regPointer;
 	switch(regToFind){
-		case 0x00: regPointer = &state->R0; regPointer += 1;  break; //Higher
+		case 0x00: regPointer = &state->R0; regPointer += 1; break; //Higher
 		case 0x01: regPointer = &state->R1; regPointer += 1; break;
 		case 0x02: regPointer = &state->R2; regPointer += 1; break;
 		case 0x03: regPointer = &state->R3; regPointer += 1; break;
@@ -325,6 +325,31 @@ uint32_t* returnLongRegisterPointer(uint8_t regToFind, State8002* state){
   		case 0x0f: printf("Invalid address for long register"); return NULL; break;
   		default: printf("WRONG"); return regPointer; break;
   	}
+
+	return regPointer;
+}
+
+uint64_t* returnQuadRegisterPointer(uint8_t regToFind, State8002* state){
+	uint64_t* regPointer;
+	switch(regToFind){
+		case 0x00: regPointer = &state->R0; break;
+		case 0x01: printf("Invalid address for quad register");	return NULL; break;
+		case 0x02: printf("Invalid address for quad register");	return NULL; break;
+		case 0x03: printf("Invalid address for quad register");	return NULL; break;
+		case 0x04: regPointer = &state->R4; break;
+		case 0x05: printf("Invalid address for quad register");	return NULL; break;
+		case 0x06: printf("Invalid address for quad register");	return NULL; break;
+		case 0x07: printf("Invalid address for quad register");	return NULL; break;
+		case 0x08: regPointer = &state->R8; break;
+		case 0x09: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0a: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0b: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0c: regPointer = &state->R12; break;
+		case 0x0d: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0e: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0f: printf("Invalid address for quad register");	return NULL; break;
+		default: printf("WRONG"); return NULL; break;
+	}
 
 	return regPointer;
 }
@@ -1624,7 +1649,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 									} break;
 						case 0x5f:	switch(field1){
-										case 0x00:	printf("CALL %04x", code[1]);		//CALL address
+										case 0x00:	printf("CALL %04x\t", code[1]);		//CALL address
 													opwords = 2;
 													break;
 										default:	printf("CALL %04x(", code[1]);		//CALL address(Rd)
@@ -1855,7 +1880,6 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									findRegister(field2);
 									printf(", ");
 									findRegister(field1);
-									printf("\t");
 									break;
 						case 0x82:	printf("SUBB ");						//SUBB Rbd, Rbs
 									findregRegister(field2);
@@ -1906,7 +1930,6 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									findRegister(field2);
 									printf(", ");
 									findRegister(field1);
-									printf("\t");
 									break;
 						case 0x8c:	switch(field2){
 										case 0x00:	printf("COMB ");		//COMB Rbd
@@ -2029,8 +2052,10 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 						case 0x9d:	printf("NOP");							//NO INSTRUCTION
 									break;
 						case 0x9e:	switch(field1){
-										case 0x00:	printf("RET %02x", field2);	//RET cc
+										case 0x00:	printf("RET %01x\t", field2);	//RET cc
+													break;
 										default:	printf("How did you get here?");
+													break;
 									} break;
 						case 0x9f:	printf("NOP");							//NO INSTRUCTION
 									break;
@@ -2043,6 +2068,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									findRegister(field2);
 									printf(", ");
 									findRegister(field1);
+									printf("\t");
 									break;
 						case 0xa2:	printf("RESB ");						//RESB Rbd, #b
 									findregRegister(field1);
@@ -2570,6 +2596,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 						default: printf("%02x not implemented in dissasembler", upperHalf); break;
 					} break;
 	}
+	printf("\t");
 	return opwords;
 }
 
@@ -2598,6 +2625,7 @@ void systemCall(State8002 state, uint16_t identifier){
 	state->systemNormal = 1;
 }
 int Emulate8002(State8002* state){
+	uint16_t *opcode = &state->memory[state->pc/2];
 
 
 
@@ -2613,11 +2641,11 @@ int Emulate8002(State8002* state){
 
 	Disassemble8002(state->memory, state->pc);
 
-	state->memory[0] = 2;
+	//state->memory[0] = 2;
 
 	state->pc += 2;
 
-	state->status = 0b1000;
+	//state->status = 0b1000;
 	//printf("point to memory plus 1 is :%x\n",(*(memptr8 + 2) ));
 
 
@@ -2640,126 +2668,170 @@ int Emulate8002(State8002* state){
 			switch(upperHalf){ //opcode
 				case 0x00:{ //ADDB,  IM or IR
 								if(field1 == 0){	// ADDB Rbd, #data
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
-									*dReg8 = *dReg8 + (opcode[1] >> 8); //assuming we only use the top bits
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res += opcode[1] >> 8; //Higher
+									} else{
+										res += opcode[1]; //Lower
+									}
+									writeReg8(field2, state, res);
 									state->pc += 2;
 								}
 								else{ 				// ADDB Rbd, @Rs
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
-									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
-									*dReg8 = *dReg8 + state->memory[*sReg8];
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res += state->memory[offset] >> 8; //Higher
+									} else{
+										res += state->memory[offset]; //Lower
+									}
+									writeReg8(field2, state, res);
 								}
 							} break;
-				case 0x01:{//ADD IM or IR
+				case 0x01:{ //ADD IM or IR
 								if(field1 == 0){	//ADD Rd, #data
-									uint16_t* dReg16 = returnByteRegisterPointer(field2, state);
-									*dReg16 = *dReg16 + opcode[1] ; //assuming we only use the top bits
+									uint16_t res = readReg16(field2, state) + opcode[1];
+									writeReg16(field2, state, res);
+									state->cc.c = (readReg16(field2, state) + opcode[1] > 0xffff);
 									state->pc += 2;
 								}
 								else{ 				//ADD Rd, @Rs
-									uint16_t* dReg16 = returnByteRegisterPointer(field2, state);
-									uint16_t* sReg16 = returnByteRegisterPointer(field1, state);
-									*dReg16 = *dReg16 + state->memory[*sReg16];
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res += state->memory[offset];
+									writeReg16(field2, state, res);
 								}
 							} break;
 				case 0x02:{
 								if(field1 == 0){	// SUBB Rbd, #data
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
-									*dReg8 = *dReg8 - (opcode[1] >> 8); //assuming we only use the upper eight bits
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res -= opcode[1] >> 8; //Higher
+									} else{
+										res -= opcode[1]; //Lower
+									}
+									writeReg8(field2, state, res);
 									state->pc += 2;
 								} else {			//SUBB Rbd, @Rs
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
-									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
-									*dReg8 = *dReg8 - state->memory[*sReg8];
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res -= state->memory[offset] >> 8; //Higher
+									} else{
+										res -= state->memory[offset];	//Lower
+									}
+									writeReg8(field2, state, res);
 								}
 							} break;
 				case 0x03:{
 								if(field1 == 0){	// SUB Rd, #data
-									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
-									*dReg16 = *dReg16 - opcode[1];
+									uint16_t res = readReg16(field2, state) - opcode[1];
+									writeReg16(field2, state, res);
 									state->pc += 2;
 								} else {			// SUB Rd, @Rs
-									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
-									uint16_t* sReg16 = returnWordRegisterPointer(field1, state);
-									*dReg16 = *dReg16 - state->memory[*sReg16];
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res -= state->memory[offset];
+									writeReg16(field2, state, res);
 								}
 							} break;
 				case 0x04:{
 								if(field1 == 0){	//ORB Rbd, #data
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t res = readReg8(field2, state);
 									if(field2 <= 7){
-										*dReg8 = *dReg8 | (opcode[1] >> 8); // Higher
+										res = res | opcode[1] >> 8; //Higher
 									} else{
-										*dReg8 = *dReg8 | (opcode[1]); // Lower
+										res = res | opcode[1]; //Lower
 									}
+									writeReg8(field2, state, res);
 									state->pc += 2;
 								} else{				//ORB Rbd, @Rs
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
-									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
-									*dReg8 = *dReg8 | state->memory[*sReg8];
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res = res | (state->memory[offset] >> 8); //Higher
+									} else{
+										res = res | state->memory[offset];	//Lower
+									}
+									writeReg8(field2, state, res);
 								}
 							} break;
 				case 0x05: {
 								if(field1 == 0){	//OR Rd, #data
-									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
-									*dReg16 = *dReg16 | opcode[1];
+									uint16_t res = readReg16(field2, state) | opcode[1];
+									writeReg16(field2, state, res);
 									state->pc += 2;
 								} else{				//OR Rd, @Rs
-									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
-									uint16_t* sReg16 = returnWordRegisterPointer(field1, state);
-									*dReg16 = *dReg16 | state->memory[*sReg16];
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res | state->memory[offset];
+									writeReg16(field2, state, res);
 								}
 							}	break;
 				case 0x06: {
 								if(field1 == 0){	//ANDB Rbd, #data
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t res = readReg8(field2, state);
 									if(field2 <= 7){
-										*dReg8 = *dReg8 & (opcode[1] >> 8); //Higher
+										res = res & opcode[1] >> 8; //Higher
 									} else{
-										*dReg8 = *dReg8 & opcode[1]; //Lower
+										res = res & opcode[1]; //Lower
 									}
+									writeReg8(field2, state, res);
 									state->pc += 2;
 								} else{				//ANDB Rbd, @Rs
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
-									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
-									*dReg8 = *dReg8 & state->memory[*sReg8];
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res = res & (state->memory[offset] >> 8);	//Higher
+									} else {
+										res = res & state->memory[offset];	//Lower
+									}
+									writeReg8(field2, state, res);
 								}
 							}	break;
 				case 0x07: {
 								if(field1 == 0){	//AND Rd, #data
-									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
-									*dReg16 = *dReg16 & opcode[1];
+									uint16_t res = readReg16(field2, state) & opcode[1];
+									writeReg16(field2, state, res);
 									state->pc += 2;
 								} else{				//AND Rd, @Rs
-									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
-									uint16_t* sReg16 = returnWordRegisterPointer(field1, state);
-									*dReg16 = *dReg16 & state->memory[*sReg16];
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res & state->memory[offset];
+									writeReg16(field2, state, res);
 								}
 							}	break;
 				case 0x08: {
 								if(field1 == 0){	//XORB Rbd, #data
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
+									uint8_t res = readReg8(field2, state);
 									if(field2 <= 7){
-										*dReg8 = *dReg8 ^ (opcode[1] >> 8); //Higher
+										res = res ^ opcode[1] >> 8; //Higher
 									} else{
-										*dReg8 = *dReg8 ^ opcode[1]; //Lower
+										res = res ^ opcode[1]; //Lower
 									}
+									writeReg8(field2, state, res);
 									state->pc += 2;
 								} else{				//XORB Rbd, @Rs
-									uint8_t* dReg8 = returnByteRegisterPointer(field2, state);
-									uint8_t* sReg8 = returnByteRegisterPointer(field1, state);
-									*dReg8 = *dReg8 ^ state->memory[*sReg8];
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res = res ^ (state->memory[offset] >> 8);	//Higher
+									} else{
+										res = res ^ state->memory[offset];	//Lower
+									}
+									writeReg8(field2, state, res);
 								}
 							}	break;
 				case 0x09: {
 								if(field1 == 0){	//XOR Rd, #data
-									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
-									*dReg16 = *dReg16 ^ opcode[1];
+									uint16_t res = readReg16(field2, state) ^ opcode[1];
+									writeReg16(field2, state, res);
 									state->pc += 2;
 								} else{				//XOR Rd, @Rs
-									uint16_t* dReg16 = returnWordRegisterPointer(field2, state);
-									uint16_t* sReg16 = returnWordRegisterPointer(field1, state);
-									*dReg16 = *dReg16 ^ state->memory[*sReg16];
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res ^ state->memory[offset];
+									writeReg16(field2, state, res);
 								}
 							}	break;
 				case 0x0a: {
@@ -2800,108 +2872,382 @@ int Emulate8002(State8002* state){
 							}	break;
 				case 0x12: {
 								if(field1 == 0){	//SUBL RRd, #data
-									uint32_t* dReg32 = returnLongRegisterPointer(field2, state);
-									*dReg32 = *dReg32 - (opcode[1] | opcode[2]);
+									uint32_t res = readReg32(field2, state) - (opcode[1] | opcode [2]);
+									writeReg32(field2, state, res);
 									state->pc += 4;
 								} else{				//SUBL RRd, @Rs
-									uint32_t* dReg32 = returnLongRegisterPointer(field2, state);
-									uint32_t* sReg32 = returnLongRegisterPointer(field1, state);
-									*dReg32 = *dReg32 - state->memory[*sReg32]; //Might be wrong
+									uint32_t res = readReg32(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res - state->memory[offset];
+									writeReg32(field2, state, res);
 								}
 							}	break;
 				case 0x13: UnimplementedInstruction(state);	break; //TODO
 				case 0x14: {
-								if(field1 == 0){
-									uint32_t* dReg32 = returnLongRegisterPointer(field2, state);
-									*dReg32 = (opcode[1] | opcode[2]);
+								if(field1 == 0){	//LDL RRd, #data
+									writeReg32(field2, state, (opcode[1] | opcode[2]));
 									state->pc += 4;
-								} else{
-									uint32_t* dReg32 = returnLongRegisterPointer(field2, state);
-									uint32_t* sReg32 = returnLongRegisterPointer(field1, state);
-									*dReg32 = state->memory[*sReg32];
+								} else{				//LDL RRd, @Rs
+									uint16_t offset = readReg16(field1, state);
+									writeReg32(field2, state, state->memory[offset]);
 								}
 							}	break;
-				case 0x15: UnimplementedInstruction(state);	break;
+				case 0x15: UnimplementedInstruction(state);	break; //TODO
 				case 0x16: {//ADDL IM or IR
-								if(field1 == 0){	//ADDB (IM)
-									state->pc += 2 ;
-									uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
-									uint32_t immediate = (opcode[1] << 16) & opcode[2];
-									readMem()
-									*destinationReg32 = fix_32( fix_32(*destinationReg32) + immediate ); //assuming we only use the top bits
-								}
-								else{ //ADDB (IR)
-									uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
-									uint32_t* sourceReg32 = returnLongRegisterPointer(field1, state);
-									uint32_t* memptr32 = state->memory;
-									uint32_t memData32 = fix_32(*(memptr32 + fix_32(*sourceReg32)));
-									*destinationReg32 = fix_32(*destinationReg32) + memData32;
+								if(field1 == 0){	//ADDL RRd, #data
+									uint32_t res = readReg32(field2, state) + (opcode[1] | opcode [2]);
+									writeReg32(field2, state, res);
+									state->pc += 4;
+								} else{ 			//ADDL RRd, @Rs
+									uint32_t res = readReg32(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res + state->memory[offset];
+									writeReg32(field2, state, res);
 								}
 							} break;
-				case 0x17: UnimplementedInstruction(state);	break;
-				case 0x18: UnimplementedInstruction(state); break;
-				case 0x19: UnimplementedInstruction(state);	break;
-				case 0x1a: UnimplementedInstruction(state);	break;
-				case 0x1b: UnimplementedInstruction(state);	break;
-				case 0x1c: UnimplementedInstruction(state);	break;
-				case 0x1d: UnimplementedInstruction(state);	break;
-				case 0x1e: UnimplementedInstruction(state); break;
-				case 0x1f: UnimplementedInstruction(state);	break;
-				case 0x20: UnimplementedInstruction(state);	break;
-				case 0x21: UnimplementedInstruction(state); break;
-				case 0x22: UnimplementedInstruction(state);	break;
-				case 0x23: UnimplementedInstruction(state);	break;
-				case 0x24: UnimplementedInstruction(state); break;
-				case 0x25: UnimplementedInstruction(state);	break;
-				case 0x26: UnimplementedInstruction(state);	break;
-				case 0x27: UnimplementedInstruction(state);	break;
-				case 0x28: UnimplementedInstruction(state);	break;
-				case 0x29: UnimplementedInstruction(state);	break;
-				case 0x30: UnimplementedInstruction(state); break;
-				case 0x31: UnimplementedInstruction(state);	break;
-				case 0x32: UnimplementedInstruction(state);	break;
-				case 0x33: UnimplementedInstruction(state); break;
-				case 0x34: UnimplementedInstruction(state);	break;
-				case 0x35: UnimplementedInstruction(state);	break;
-				case 0x36: UnimplementedInstruction(state);	break;
-				case 0x37: UnimplementedInstruction(state);	break;
-				case 0x38: UnimplementedInstruction(state);	break;
-				case 0x39: UnimplementedInstruction(state);	break;
-				case 0x40: { //ADDB, DA or X
-								uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-								state->pc+=2;
-								uint8_t* memptr8 = state->memory;
+				case 0x17: UnimplementedInstruction(state);	break; //TODO
+				case 0x18: {
+								if(field1 == 0){	//MULTL RQd, #data
+									uint64_t res = readReg64(field2, state) * (opcode[1] | opcode[2]);
+									writeReg64(field2, state, res);
+									state->pc += 4;
+								} else{				//MULTL RQd, @Rs
+									uint64_t res = readReg64(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res * state->memory[offset];
+									writeReg64(field2, state, res);
+								}
+							} break;
+				case 0x19: {
+								if(field1 == 0){	//MULT RRd, #data
+									uint32_t res = readReg32(field2, state) * opcode[1];
+									writeReg32(field2, state, res);
+									state->pc += 2;
+								} else{				//MULT RRd, @Rs
+									uint32_t res = readReg32(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res * state->memory[offset];
+									writeReg32(field2, state, res);
+								}
+							}	break;
+				case 0x1a: {
+								if(field1 == 0){	//DIVL RQd, #data
+									uint64_t res = readReg64(field2, state) / (opcode[1] | opcode[2]);
+									writeReg64(field2, state, res);
+									state->pc += 4;
+								} else{				//DIVL RQd, @Rs
+									uint64_t res = readReg64(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res / state->memory[offset];
+									writeReg64(field2, state, res);
+								}
+							}	break;
+				case 0x1b: {
+								if(field1 == 0){	//DIV RRd, #data
+									uint32_t res = readReg32(field2, state) / opcode[1];
+									writeReg32(field2, state, res);
+									state->pc += 2;
+								} else{				//DIV RRd, @Rs
+									uint32_t res = readReg32(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res / state->memory[offset];
+									writeReg32(field2, state, res);
+								}
+							}	break;
+				case 0x1c: UnimplementedInstruction(state);	break; //TODO
+				case 0x1d: {	//LDL @Rd, RRs
+								uint32_t source = readReg32(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								//writeReg16()
+							}	break;
+				case 0x1e: {	//JP cc, @Rd
+								uint16_t offset = readReg16(field1, state);
+								if(checkConditionCode(field2, state->cc)){
+									state->pc = state->memory[offset];
+								}
+							} break;
+				case 0x1f: {	//CALL @Rd
+								uint16_t dest = readReg16(field1, state);
+								state->sp -= 2;
+								state->memory[state->sp] = state->pc;
+								state->pc = dest;
+							}	break;
+				case 0x20: {
+								if(field1 == 0){	//LDB Rbd, #data
+									if(field2 <= 7){
+										writeReg8(field2, state, opcode[1]>>8); //Higher
+									} else{
+										writeReg8(field2, state, opcode[1]);	//Lower
+									}
+									state->pc += 2;
+								} else{				//LDB Rbd, @Rs
+									uint16_t offset = readReg16(field1, state);
+									writeReg8(field2, state, state->memory[offset]);
+								}
+							}	break;
+				case 0x21: {
+								if(field1 == 0){	//LD Rd, #data
+									writeReg16(field2, state, opcode[1]);
+									state->pc += 2;
+								} else{				//Ld Rd, @Rs
+									uint16_t offset = readReg16(field1, state);
+									writeReg16(field2, state, state->memory[offset]);
+								}
+							} break;
+				case 0x22: {	//TODO
+								if(field1 == 0){
+									uint16_t offset = readReg16(field1, state);
+									uint16_t temp = state->memory[offset];
+								} else{
 
-								if(field1 == 0){	//ADDB (DA)
-									*destinationReg8 = *destinationReg8 + *(memptr8 + opcode[1]); //assuming we only use the top bits
 								}
-								else{ //ADDB (IR)
-									uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-									*destinationReg8 = *destinationReg8 + *(memptr8 + opcode[1] + *sourceReg8); //assuming we only use the top bits
+							}	break;
+				case 0x23: {	//TODO
+								if(field1 == 0){
+
+								} else{
+
 								}
+							}	break;
+				case 0x24: UnimplementedInstruction(state); break; //TODO
+				case 0x25: UnimplementedInstruction(state);	break; //TODO
+				case 0x26: UnimplementedInstruction(state);	break; //TODO
+				case 0x27: UnimplementedInstruction(state);	break; //TODO
+				case 0x28: {	//INCB @Rd, #n
+								uint16_t offset = readReg16(field1, state);
+								//WRITE MEMORY
+							}	break;
+				case 0x29: UnimplementedInstruction(state);	break; //TODO
+				case 0x2a: UnimplementedInstruction(state);	break; //TODO
+				case 0x2b: UnimplementedInstruction(state);	break; //TODO
+				case 0x2c: {	//EXB Rbd, @Rs
+								uint8_t dest = readReg8(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								uint16_t temp = state->memory[offset];
+								state->memory[offset] = temp; //TODO?
+								writeReg8(field2, state, temp);
+							}	break;
+				case 0x2d: {	//EX Rd, @Rs
+								uint16_t dest = readReg16(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								uint16_t temp = state->memory[offset];
+								state->memory[offset] = temp; //TODO?
+								writeReg16(field2, state, temp);
+							}	break;
+				case 0x2e: {	//LDB @Rd, Rbs
+								uint8_t source = readReg8(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								state->memory[offset] = source; //TODO?
+							}	break;
+				case 0x2f: {	//LD @Rd, Rs
+								uint16_t source = readReg16(field2, state);
+								uint16_t offset = readReg16(field1, state);
+								state->memory[offset] = source; //TODO?
+							}	break;
+				case 0x30: UnimplementedInstruction(state); break; //TODO
+				case 0x31: UnimplementedInstruction(state);	break; //TODO
+				case 0x32: UnimplementedInstruction(state);	break; //TODO
+				case 0x33: UnimplementedInstruction(state); break; //TODO
+				case 0x34: UnimplementedInstruction(state);	break; //TODO
+				case 0x35: UnimplementedInstruction(state);	break; //TODO
+				case 0x36: break;
+				case 0x37: UnimplementedInstruction(state);	break; //TODO
+				case 0x38: break;
+				case 0x39: {	//TODO
+								if(field2 == 0){
+
+								} else{
+
+								}
+							}	break;
+				case 0x3a: UnimplementedInstruction(state); break; //TODO?
+				case 0x3b: UnimplementedInstruction(state); break; //TOOD?
+				case 0x3c: UnimplementedInstruction(state); break; //TODO?
+				case 0x3d: UnimplementedInstruction(state); break; //TODO?
+				case 0x3e: UnimplementedInstruction(state); break; //TOOD?
+				case 0x3f: {	//CALL @Rd
+								uint16_t offset = readReg16(field1, state);
+								state->sp -= 2;
+								state->memory[state->sp] = state->pc;
+								state->pc = offset;	//Not entirely sure what gets stored for call
+							} break;
+				case 0x40: { //ADDB, DA or X
+								if(field1 == 0){	//ADDB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res += state->memory[opcode[1]] >> 8;			//Higher
+									} else{
+										res += state->memory[opcode[1]];				//Lower
+									}
+									writeReg8(field2, state, res);
+								} else{				//ADDB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res += state->memory[offset + opcode[1]] >> 8;	//Higher
+									} else{
+										res += state->memory[offset + opcode[1]];		//Lower
+									}
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
 							} break;
 				case 0x41: {//ADD, DA or X
-								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-								state->pc+=2;
-								uint16_t* memptr16 = state->memory;
-
-								if(field1 == 0){	//ADD (DA)
-									*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*(memptr16 + opcode[1]))); //assuming we only use the top bits
+								if(field1 == 0){	//ADD Rd, address
+									uint16_t res = readReg16(field2, state) + state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{ 			//ADD Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res += state->memory[offset + opcode[1]];
+									writeReg16(field2, state, res);
 								}
-								else{ //ADD (IR)
-									uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
-									*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*(memptr16 + opcode[1] + fix_16(*sourceReg16)))); //assuming we only use the top bits
-								}
+								state->pc += 2;
 							} break;
-				case 0x42: UnimplementedInstruction(state);	break;
-				case 0x43: UnimplementedInstruction(state);	break;
-				case 0x44: UnimplementedInstruction(state);	break;
-				case 0x45: UnimplementedInstruction(state);	break;
-				case 0x46: UnimplementedInstruction(state);	break;
-				case 0x47: UnimplementedInstruction(state);	break;
-				case 0x48: UnimplementedInstruction(state); break;
-				case 0x49: UnimplementedInstruction(state);	break;
-				case 0x4a: UnimplementedInstruction(state);	break;
+				case 0x42: {
+								if(field1 == 0){	//SUBB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res -= state->memory[opcode[1]] >> 8;			//Higher
+									} else{
+										res -= state->memory[opcode[1]];				//Lower
+									}
+									writeReg8(field2, state, res);
+								} else{				//SUBB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res -= state->memory[opcode[1] + offset] >> 8;	//Higher
+									} else{
+										res -= state->memory[opcode[1] + offset];		//Lower
+									}
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x43: {
+								if(field1 == 0){	//SUB Rd, address
+									uint16_t res = readReg16(field2, state) - state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{				//SUB Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res -= state->memory[opcode[1] + offset];
+									writeReg16(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x44: {
+								if(field1 == 0){	//ORB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res = res | (state->memory[opcode[1]] >> 8);	//Higher
+									} else{
+										res = res | state->memory[opcode[1]];			//Lower
+									}
+									writeReg8(field2, state, res);
+								} else{				//ORB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res = res | (state->memory[offset + opcode[1]] >> 8);	//Higher
+									} else{
+										res = res | state->memory[offset + opcode[1]];	//Lower
+									}
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x45: {
+								if(field1 == 0){	//OR Rd, address
+									uint16_t res = readReg16(field2, state) | state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{				//OR Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res | state->memory[offset + opcode[1]];
+									writeReg16(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x46: {
+								if(field1 == 0){	//ANDB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res = res & (state->memory[opcode[1]] >> 8);	//Higher
+									} else{
+										res = res & state->memory[opcode[1]];			//Lower
+									}
+									writeReg8(field2, state, res);
+								} else{				//ANDB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res = res & (state->memory[offset + opcode[1]] >> 8);	//Higher
+									} else{
+										res = res & state->memory[offset + opcode[1]];	//Lower
+									}
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x47: {
+								if(field1 == 0){	//AND Rd, address
+									uint16_t res = readReg16(field2, state) & state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{				//AND Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res & state->memory[offset + opcode[1]];
+									writeReg16(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x48: {
+								if(field1 == 0){	//XORB Rbd, address
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res = res ^ (state->memory[opcode[1]] >> 8);
+									} else{
+										res = res ^ state->memory[opcode[1]];
+									}
+									writeReg8(field2, state, res);
+								} else{				//XORB Rbd, addr(Rs)
+									uint8_t res = readReg8(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									if(field2 <= 7){
+										res = res ^ (state->memory[offset + opcode[1]] >> 8);
+									} else{
+										res = res ^ state->memory[offset + opcode[1]];
+									}
+									writeReg8(field2, state, res);
+								}
+								state->pc += 2;
+							} break;
+				case 0x49: {
+								if(field1 == 0){	//XOR Rd, address
+									uint16_t res = readReg16(field2, state) ^ state->memory[opcode[1]];
+									writeReg16(field2, state, res);
+								} else{				//XOR Rd, addr(Rs)
+									uint16_t res = readReg16(field2, state);
+									uint16_t offset = readReg16(field1, state);
+									res = res ^ state->memory[offset + opcode[1]];
+									writeReg16(field2, state, res);
+								}
+								state->pc += 2;
+							}	break;
+				case 0x4a: {
+								if(field1 == 0){
+									uint8_t res = readReg8(field2, state);
+									if(field2 <= 7){
+										res -= state->memory[opcode[1]] >> 8;
+									} else{
+										res -= state->memory[opcode[1]];
+									}
+								} else{
+
+								}
+							}	break;
 				case 0x4b: UnimplementedInstruction(state); break;
 				case 0x4c: UnimplementedInstruction(state);	break;
 				case 0x4d: UnimplementedInstruction(state);	break;
@@ -2934,7 +3280,18 @@ int Emulate8002(State8002* state){
 				case 0x5c: UnimplementedInstruction(state);	break;
 				case 0x5d: UnimplementedInstruction(state); break;
 				case 0x5e: UnimplementedInstruction(state);	break;
-				case 0x5f: UnimplementedInstruction(state);	break;
+				case 0x5f: {
+								if(field1 == 0){	//CALL address
+									state->sp -= 2;
+									state->memory[state->sp] = state->pc;
+									state->pc = opcode[1];
+								} else{				//CALL address(Rd)
+									uint16_t offset = readReg16(field1, state);
+									state->pc -= 2;
+									state->memory[state->sp] = state->pc;
+									state->pc = state->memory[offset];	//TODO?
+								}
+							}	break;
 				case 0x60: UnimplementedInstruction(state); break;
 				case 0x61: UnimplementedInstruction(state);	break;
 				case 0x62: UnimplementedInstruction(state);	break;
@@ -3040,10 +3397,18 @@ int Emulate8002(State8002* state){
 				case 0x9b: UnimplementedInstruction(state);	break;
 				case 0x9c: UnimplementedInstruction(state); break;
 				case 0x9d: UnimplementedInstruction(state);	break;
-				case 0x9e: UnimplementedInstruction(state);	break;
+				case 0x9e: {	//RET cc
+								if(checkConditionCode(field2, state->cc)){
+									state->pc = state->memory[state->sp];
+								}
+								state->sp += 2;
+							}	break;
 				case 0x9f: UnimplementedInstruction(state); break;
 				case 0xa0: UnimplementedInstruction(state);	break;
-				case 0xa1: UnimplementedInstruction(state);	break;
+				case 0xa1: {	//LD Rd, Rs
+								uint16_t source = readReg16(field1, state);
+								writeReg16(field2, state, source);
+							}	break;
 				case 0xa2: UnimplementedInstruction(state);	break;
 				case 0xa3: UnimplementedInstruction(state);	break;
 				case 0xa4: UnimplementedInstruction(state);	break;
@@ -3074,13 +3439,13 @@ int Emulate8002(State8002* state){
 				case 0xbd: UnimplementedInstruction(state); break;
 				case 0xbe: UnimplementedInstruction(state);	break;
 				case 0xbf: UnimplementedInstruction(state);	break;
-				default: printf("dicks2");done=1; break;
+				default: printf("wrong place");done=1; break;
 			}
 		}
 	}
 
-	printf("\t");
-	printf("R1: %i, R2: %i, R7: %i, R8: %i  ||| OP: %x\n",state->R1,state->R2,state->R7,state->R8,upperHalf);
+	//printf("\t");
+	printf("R0: %x R1: %x, R2: %x, R3: %x, SP: %x  ||| OP: %x\n",readReg16(0, state), readReg16(1, state), readReg16(2, state),readReg16(3, state), readReg16(15, state),upperHalf);
 
 	if(upperFour == 0xFF){
 		return 1;
@@ -3185,7 +3550,8 @@ Pins8002* InitPins(void){
 int main (int argc, char**argv){
 	int done = 0;
 	State8002* state = InitState();
-	Pins8002* pins = InitPins();writeZBus(address, pins);
+	Pins8002* pins = InitPins();
+	writeZBus(address, pins);
 
 	ReadFileIntoMemoryAt(state, "testFormat.t", 0);
 	//ReadFileIntoMemoryAt(state, "jr.t", 2);
