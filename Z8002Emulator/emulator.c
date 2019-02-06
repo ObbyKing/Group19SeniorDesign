@@ -94,6 +94,157 @@ bool checkConditionCode(uint8_t cc,ConditionCodes o){
 	}
 }
 
+bool setCarryFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t field1, State8002* state){
+
+	switch(upperhalf){
+			case 0x00:{ //ADDB,  IM or IR
+					if(field1 == 0){	// ADDB Rbd, #data
+						int16_t result = regValue + newValue;
+						if (result > 0xff && (regValue <= 0xff && newValue <= 0xff)){
+							state->cc.c = 1;
+							return true;
+						}
+						else{
+							state->cc.c = 0;
+							return false;
+						}
+					}
+					else{ 				// ADDB Rbd, @Rs
+						return false;
+					}
+				} break;
+
+			case 0x8b:{
+					state->cc.c = 0;
+				} break;
+
+			default: printf("not implemented flag"); break;
+	}
+	return false;
+}
+
+bool setSignFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t field1, State8002* state){
+
+	switch(upperhalf){
+			case 0x00:{ //ADDB,  IM or IR
+					if(field1 == 0){	// ADDB Rbd, #data
+						int8_t result = regValue + newValue;
+						if (result < 0){
+							state->cc.s = 1;
+							return true;
+						}
+						else{
+							state->cc.s = 0;
+							return false;
+						}
+					}
+					else{ 				// ADDB Rbd, @Rs
+						return false;
+					}
+				} break;
+
+			case 0x8b:{
+
+					int16_t tempNewValue = newValue;
+					int16_t result = regValue - tempNewValue;
+					if (result >= 0){
+						state->cc.s = 0;
+					}
+					else{
+						state->cc.s = 1;
+					}
+				} break;
+
+			default: printf("not implemented flag"); break;
+	}
+	return false;
+}
+
+bool setOverflowFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t field1, State8002* state){
+
+	switch(upperhalf){
+			case 0x00:{ //ADDB,  IM or IR
+					if(field1 == 0){	// ADDB Rbd, #data
+						printf(" \n");
+						printf(" orig: %d", regValue);
+						printf(" new: %d", newValue);
+						int8_t result = regValue + newValue;
+						printf(" res: %d", result);
+						printf(" \n");
+						if (result < 0 && regValue > 0 && newValue > 0){
+							state->cc.v = 1;
+							return true;
+						}
+						else{
+							state->cc.v = 0;
+							return false;
+						}
+					}
+					else{ 				// ADDB Rbd, @Rs
+						return false;
+						
+					}
+				} break;
+
+			case 0x8b:{
+					int16_t tempNewValue = newValue;
+					int16_t result = regValue - tempNewValue;
+					printf(" dest: %d", regValue);
+					printf(" src: %d", tempNewValue);
+					printf(" res: %d", result);
+					printf(" \n");
+
+					if ((regValue > 0 && (tempNewValue < 0 && result < 0)) || (regValue < 0 && (tempNewValue > 0 && result > 0))){
+						state->cc.v = 1;
+					}
+					else{
+						state->cc.v = 0;
+					}
+				} break;
+
+			default: printf("not implemented flag"); break;
+	}
+	return false;
+}
+
+bool setHalfCarryFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t field1, State8002* state){
+
+	switch(upperhalf){
+			case 0x00:{ //ADDB,  IM or IR
+					if(field1 == 0){	// ADDB Rbd, #data
+						int8_t result = regValue + newValue;
+						int8_t check1 = result & 0x10;
+						int8_t check2 = regValue & 0x10;
+						int8_t check3 = newValue & 0x10;
+
+						check1 = check1 >> 4;
+						check2 = check2 >> 4;
+						check3 = check3 >> 4;
+
+						printf(" check1: %d", check1);
+						printf(" check2: %d", check2);
+						printf(" check3: %d", check3);
+						printf(" \n");
+
+						if ((check1 == 1 && (check2 == 0 && check3 == 0)) || (check1 == 1 && (check2 == 1 && check3 == 1))){
+							state->cc.h = 1;
+							return true;
+						}
+						else{
+							state->cc.h = 0;
+							return false;
+						}
+					}
+					else{ 				// ADDB Rbd, @Rs
+						return false;
+						
+					}
+				} break;
+			default: printf("not implemented flag"); break;
+	}
+	return false;
+}
+
 int parity(int x, int size){
 	int i;
 	int p = 0;
@@ -2452,14 +2603,28 @@ int Emulate8002(State8002* state){
 			switch(upperHalf){ //opcode
 				case 0x00:{ //ADDB,  IM or IR
 								if(field1 == 0){	// ADDB Rbd, #data
+									uint8_t readVal = readReg8(field2, state);
 									uint8_t res = readReg8(field2, state);
+									uint8_t secondVal = 0;
 									if(field2 <= 7){
 										res += opcode[1] >> 8; //Higher
+										secondVal = opcode[1] >> 8;
 									} else{
 										res += opcode[1]; //Lower
+										secondVal = opcode[1];
 									}
+
+									setCarryFlag(readVal, secondVal, upperHalf, field1, state);
+									setSignFlag(readVal, secondVal, upperHalf, field1, state);
+									setOverflowFlag(readVal, secondVal, upperHalf, field1, state);
+									setHalfCarryFlag(readVal, secondVal, upperHalf, field1, state);
+
 									writeReg8(field2, state, res);
+						
 									state->pc += 2;
+
+									state->cc.z = (res == 0);
+									state->cc.d = 0;
 								}
 								else{ 				// ADDB Rbd, @Rs
 									uint8_t res = readReg8(field2, state);
@@ -3279,37 +3444,18 @@ int Emulate8002(State8002* state){
 				case 0x88: UnimplementedInstruction(state);	break;
 				case 0x89: UnimplementedInstruction(state);	break;
 				case 0x8a: UnimplementedInstruction(state);	break;
-				case 0x8b: {//CP R  needs work on C and V flags
+				case 0x8b: {//CP R  
 								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
 							 	uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
+							
+								//setCarryFlag(fix_16(*destinationReg16), fix_16(*sourceReg16), upperHalf, field1, state);
+								setSignFlag(*destinationReg16, (*sourceReg16), upperHalf, field1, state);
+								setOverflowFlag((*destinationReg16), (*sourceReg16), upperHalf, field1, state);
+
 							 	uint32_t result = fix_16(*destinationReg16) - fix_16(*sourceReg16);
-								if(result & 0x80 == fix_16(*destinationReg16) & 0x80){ // MSB has no borrow
-									state->cc.c = 0;
-								}
-								else{
-									state->cc.c = 1;
-								}
+								 
+								state->cc.z = (result == 0);
 
-								if(result == 0){
-									state->cc.z = 1;
-								}
-								else{
-									state->cc.z = 0;
-								}
-
-								if(result < 0){
-									state->cc.s = 1;
-								}
-								else{
-									state->cc.s = 0;
-								}
-
-								if(result & 0x100 > 0){
-									state->cc.v = 1;
-								}
-								else{
-									state->cc.v = 0;
-								}
 							} break;
 				case 0x8c: UnimplementedInstruction(state);	break;
 				case 0x8d: UnimplementedInstruction(state);	break;
@@ -3382,6 +3528,8 @@ int Emulate8002(State8002* state){
 
 	//printf("\t");
 	printf("R0: %x R1: %x, R2: %x, R3: %x, SP: %x  ||| OP: %x\n",readReg16(0, state), readReg16(1, state), readReg16(2, state),readReg16(3, state), readReg16(15, state),upperHalf);
+	printf("c: %i, z: %i, s: %i v: %i, d: %d, h: %d\n", state->cc.c, state->cc.z, state->cc.s, state->cc.v, state->cc.d, state->cc.h);
+	printf(" \n");
 
 	if(upperFour == 0xFF){
 		return 1;
