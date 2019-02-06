@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <arpa/inet.h>
-//#include <winsock2.h>
+//#include <arpa/inet.h>
+#include <winsock2.h>
 
 
 typedef int bool;
@@ -2652,44 +2652,44 @@ int Emulate8002(State8002* state){
 							}	break;
 				case 0x0c: {
 								switch(field2){
-									case 0x0:	uint16_t offset = readReg16(field1, state);	//COMB @Rd
+									case 0x00:	{uint16_t offset = readReg16(field1, state);	//COMB @Rd
 												if(field1 <= 7){
 													state->memory[offset] = (~state->memory[offset] & 0xFF00) | (state->memory[offset] & 0x00FF);	//Higher
 												} else{
 													state->memory[offset] = (state->memory[offset] & 0xFF00) | (~state->memory[offset] & 0x00FF);	//Lower
 												}
-												break;
-									case 0x1:	uint16_t offset = readReg16(field1, state);	//CPB @Rd, #data
+												}	break;
+									case 0x01:	{uint16_t offset = readReg16(field1, state);	//CPB @Rd, #data
 												if(field1 <= 7){
 													uint8_t res = (state->memory[offset] >> 8) - (opcode[1] >> 8);	//Higher
 												} else{
 													uint8_t res = state->memory[offset] - opcode[1];				//Lower
 												}
 												state->pc += 2;
-												break;
-									case 0x2:	uint16_t offset = readReg16(field1, state);	//NEGB @Rd
+												}break;
+									case 0x02:	{uint16_t offset = readReg16(field1, state);	//NEGB @Rd
 												if(field1 <= 7){
 													state->memory[offset] = (0 - (state->memory[offset]>>8)) | (state->memory[offset] & 0x00FF);	//Higher
 												} else{
 													state->memory[offset] = (state->memory[offset] & 0xFF00) | (0 - (state->memory[offset]));		//Lower
 												}
-												break;
-									case 0x4:	uint16_t offset = readReg16(field1, state);	//TESTB @Rd
+												}break;
+									case 0x04:	{uint16_t offset = readReg16(field1, state);	//TESTB @Rd
 												if(field1 <= 7){
 													state->memory[offset] = ((state->memory[offset] >> 8) | 0) | (state->memory[offset] & 0x00FF);	//Higher
 												} else{
 													state->memory[offset] = (state->memory[offset] & 0xFF00) | (state->memory[offset] | 0);
 												}
-												break;
-									case 0x5:	uint16_t offset = readReg16(field1, state);	//LDB @Rd, #data
+												}break;
+									case 0x5:	{uint16_t offset = readReg16(field1, state);	//LDB @Rd, #data
 												if(field1 <= 7){
 													state->memory[offset] = (opcode[1]>>8) | (state->memory[offset] & 0x00FF);	//Higher
 												} else{
 													state->memory[offset] = (state->memory[offset] & 0xFF00) | (opcode[1]);		//Lower
 												}
 												state->pc += 2;
-												break;
-									case 0x6:	uint16_t offset = readReg16(field1, state);	//TSETB @Rd
+												}break;
+									case 0x6:	{uint16_t offset = readReg16(field1, state);	//TSETB @Rd
 												if(field1 <= 7){
 													state->cc.s = (state->memory[offset] & 0x8000) >> 15;
 													state->memory[offset] = 0xFF | (state->memory[offset] & 0x00FF);
@@ -2697,50 +2697,50 @@ int Emulate8002(State8002* state){
 													state->cc.s = (state->memory[offset] & 0x0080) >> 8;
 													state->memory[offset] = (state->memory[offset] & 0xFF00) | 0xFF;
 												}
-												break;
-									case 0x8:	uint16_t offset = readReg16(field1, state);	//CLRB @Rd
+												}break;
+									case 0x8:	{uint16_t offset = readReg16(field1, state);	//CLRB @Rd
 												if(field1 <= 7){
 													state->memory[offset] = state->memory[offset] & 0x00FF;	//Higher
 												} else{
 													state->memory[offset] = state->memory[offset] & 0xFF00;	//Lower
 												}
-												break;
+												}break;
 									default:	UnimplementedInstruction(state); break;
 								}	break;
 							}  	break;
 				case 0x0d: {
 								switch(field2){
-									case 0x0:	uint16_t offset = readReg16(field1, state);	//COM @Rd
+									case 0x0:	{uint16_t offset = readReg16(field1, state);	//COM @Rd
 												state->memory[offset] = ~state->memory[offset];
-												break;
-									case 0x1:	uint16_t offset = readReg16(field1, state);	//CP @Rd, #data
+									}break;
+									case 0x1:	{uint16_t offset = readReg16(field1, state);	//CP @Rd, #data
 												uint16_t res = state->memory[offset] - opcode[1];
 												state->pc += 2;
-												break;
-									case 0x2:	uint16_t offset = readReg16(field1, state);	//NEG @Rd
+									}break;
+									case 0x2:	{uint16_t offset = readReg16(field1, state);	//NEG @Rd
 												state->memory[offset] = 0 - state->memory[offset];
-												break;
-									case 0x4:	uint16_t offset = readReg16(field1, state);
+									}break;
+									case 0x4:	{uint16_t offset = readReg16(field1, state);
 												uint16_t res = state->memory[offset] | 0;
-												break;
-									case 0x5:	uint16_t offset = readReg16(field1, state);	//LD @Rd, #data
+									}break;
+									case 0x5:	{uint16_t offset = readReg16(field1, state);	//LD @Rd, #data
 												state->memory[offset] = opcode[1];
 												state->pc += 2;
-												break;
-									case 0x6:	uint16_t offset = readReg16(field1, state);	//TSET @Rd
+									}break;
+									case 0x6:	{uint16_t offset = readReg16(field1, state);	//TSET @Rd
 												state->cc.s = (offset >> 15);
 												state->memory[offset] = 0xFFFF;
-												break;
-									case 0x8:	uint16_t offset = readReg16(field1, state);	//CLR @Rd
+									}break;
+									case 0x8:	{uint16_t offset = readReg16(field1, state);	//CLR @Rd
 												state->memory[offset] = 0;
-												break;
-									case 0x9:	uint16_t temp = opcode[1];					//PUSH @Rd, #data
+									}break;
+									case 0x9:	{uint16_t temp = opcode[1];					//PUSH @Rd, #data
 												uint16_t dest = readReg16(field1, state);
 												dest -= 2;
 												writeReg16(field1, state, dest);
 												state->memory[dest] = temp;
 												state->pc += 2;
-												break;
+									}break;
 									default:	UnimplementedInstruction(state); break;
 								}	break;
 							}	break;
@@ -3185,7 +3185,7 @@ int Emulate8002(State8002* state){
 									uint32_t temp = state->memory[opcode[1]];
 									uint16_t dest = readReg16(field1, state);
 									dest -= 4;
-									writeReg32(field1, state, dest)
+									writeReg32(field1, state, dest);
 									state->memory[dest] = temp;
 								} else{
 
@@ -3454,7 +3454,7 @@ int main (int argc, char**argv){
 	int done = 0;
 	State8002* state = Init8002();
 
-	ReadFileIntoMemoryAt(state, "testFormat.t", 0);
+	ReadFileIntoMemoryAt(state, "testCondition.t", 0);
 	//ReadFileIntoMemoryAt(state, "jr.t", 2);
 	while (done == 0){
 		done = Emulate8002(state);
