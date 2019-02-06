@@ -10,69 +10,6 @@ typedef int bool;
 #define true 1
 #define false 0
 
-uint8_t readReg8(uint8_t regCode,State8002* state){
-	return fix_8(*returnByteRegisterPointer(regToFind, state));
-}
-uint16_t readReg16(uint8_t regCode,State8002* state){
-	return fix_16(*returnByteRegisterPointer(regToFind, state));
-}
-uint32_t readReg32(uint8_t regCode,State8002* state){
-	return fix_32(*returnByteRegisterPointer(regToFind, state));
-}
-
-void writeReg8(uint8_t regCode, State8002* state, uint8_t data){
-	*returnByteRegisterPointer(regToFind, state)) = fix_8(data);
-}
-void writeReg16(uint8_t regCode, State8002* state, uint16_t data){
-	*returnByteRegisterPointer(regToFind, state)) = fix_16(data);
-}
-void writeReg32(uint8_t regCode, State8002* state, uint32_t data){
-	*returnByteRegisterPointer(regToFind, state)) = fix_32(data);
-}
-
-uint16_t readMem(uint16_t address, State8002* state, Pins8002 pins){
-	pins->addressStrobe = 0;
-	pins->readWrite = 1;
-	writeZBus(address, pins);
-	pins->addressStrobe = 1;
-	pins->memoryREQ = 0;
-	void zBusMemRead(state,pins);
-	pins->dataStrobe = 0;
-	return readZBus(pins);
-	pins->memoryREQ = 1;
-	pins->dataStrobe = 1;
-}
-void writeMem(uint16_t address, uint16_t data, State8002* state, Pins8002 pins){
-	pins->addressStrobe = 0;
-	pins->readWrite = 0;
-	writeZBus(address, pins);
-	pins->addressStrobe = 1;
-	pins->memoryREQ = 0;
-	void zBusMemWrite(data,state,pins){
-	}
-
-}
-
-void clock(){
-
-}
-
-
-uint8_t fix_8(uint8_t i){
-	return i;
-}
-uint16_t fix_16(uint16_t i){
-	return htons(i);
-}
-uint32_t fix_32(uint32_t i){
-	return htonl(i);
-}
-uint64_t fix_64(uint64_t i){
-	uint64_t upperHalf = (i & 0xFFFFFFFF00000000) >> 32;
-	uint64_t lowerHalf = i & 0x00000000FFFFFFFF;
-	return ((uint64_t)htonl(lowerHalf) << 32) + (uint64_t)htonl(upperHalf);
-}
-
 typedef struct ConditionCodes {
 	uint8_t		c; // Carry flag
 	uint8_t		z; // Zero flag
@@ -81,7 +18,6 @@ typedef struct ConditionCodes {
 	uint8_t		d; // Decimal adjust flah
 	uint8_t		h; // Half carry flag
 } ConditionCodes;
-
 typedef	struct State8002{
 	uint16_t	R0;
 	uint16_t	R1;
@@ -117,10 +53,11 @@ typedef	struct State8002{
 	uint8_t NVIE;
 	uint8_t VIE;
 	uint8_t systemNormal;
-	uint8_t EPA = 0;// unused by us
-	uint8_t SEG = 0; // unused by us
+	uint8_t EPA;// unused by us
+	uint8_t SEG; // unused by us
 
 	uint16_t FCW;
+	/////
 
 } State8002;
 typedef struct Pins8002{
@@ -139,13 +76,197 @@ typedef struct Pins8002{
 	uint8_t nonVectorInterupt;
 
 	uint16_t dataBus;
+}Pins8002;
+
+uint8_t fix_8(uint8_t i){
+	return i;
+}
+uint16_t fix_16(uint16_t i){
+	return htons(i);
+}
+uint32_t fix_32(uint32_t i){
+	return htonl(i);
+}
+uint64_t fix_64(uint64_t i){
+	uint64_t upperHalf = (i & 0xFFFFFFFF00000000) >> 32;
+	uint64_t lowerHalf = i & 0x00000000FFFFFFFF;
+	return ((uint64_t)htonl(lowerHalf) << 32) + (uint64_t)htonl(upperHalf);
+}
+uint8_t* returnByteRegisterPointer(uint8_t regToFind, State8002* state){
+	uint8_t* regPointer;
+	switch(regToFind){
+		case 0x00: regPointer = &state->R0; regPointer += 1; break; //Higher
+		case 0x01: regPointer = &state->R1; regPointer += 1; break;
+		case 0x02: regPointer = &state->R2; regPointer += 1; break;
+		case 0x03: regPointer = &state->R3; regPointer += 1; break;
+		case 0x04: regPointer = &state->R4; regPointer += 1; break;
+		case 0x05: regPointer = &state->R5; regPointer += 1; break;
+		case 0x06: regPointer = &state->R6; regPointer += 1; break;
+		case 0x07: regPointer = &state->R7; regPointer += 1; break;
+		case 0x08: regPointer = &state->R0;  break; // Lower
+		case 0x09: regPointer = &state->R1;  break;
+		case 0x0a: regPointer = &state->R2;  break;
+		case 0x0b: regPointer = &state->R3;  break;
+		case 0x0c: regPointer = &state->R4;  break;
+		case 0x0d: regPointer = &state->R5;  break;
+		case 0x0e: regPointer = &state->R6;  break;
+		case 0x0f: regPointer = &state->R7;  break;
+		default: printf("WRONG"); return regPointer; break;
+	}
+  return regPointer;
+}
+uint16_t* returnWordRegisterPointer(uint8_t regToFind, State8002* state){
+  	uint16_t* regPointer;
+  	switch(regToFind){
+  		case 0x00: regPointer = &state->R0; break;
+  		case 0x01: regPointer = &state->R1; break;
+  		case 0x02: regPointer = &state->R2; break;
+  		case 0x03: regPointer = &state->R3; break;
+  		case 0x04: regPointer = &state->R4; break;
+  		case 0x05: regPointer = &state->R5; break;
+  		case 0x06: regPointer = &state->R6; break;
+  		case 0x07: regPointer = &state->R7; break;
+  		case 0x08: regPointer = &state->R8; break;
+  		case 0x09: regPointer = &state->R9; break;
+  		case 0x0a: regPointer = &state->R10; break;
+  		case 0x0b: regPointer = &state->R11; break;
+  		case 0x0c: regPointer = &state->R12; break;
+  		case 0x0d: regPointer = &state->R13; break;
+  		case 0x0e: regPointer = &state->R14; break;
+  		case 0x0f:{
+				if(state->systemNormal = 1)
+					regPointer = &state->sp_SM;
+				else
+					regPointer = &state->sp_NM;
+				break;
+			}
+  		default: printf("WRONG"); return regPointer; break;
+  	}
+
+	return regPointer;
+}
+uint32_t* returnLongRegisterPointer(uint8_t regToFind, State8002* state){
+  	uint32_t* regPointer;
+  	switch(regToFind){
+  		case 0x00: regPointer = &state->R0; break;
+  		case 0x01: printf("Invalid address for long register"); return NULL; break;
+  		case 0x02: regPointer = &state->R2; break;
+  		case 0x03: printf("Invalid address for long register"); return NULL; break;
+  		case 0x04: regPointer = &state->R4; break;
+  		case 0x05: printf("Invalid address for long register"); return NULL; break;
+  		case 0x06: regPointer = &state->R6; break;
+  		case 0x07: printf("Invalid address for long register"); return NULL; break;
+  		case 0x08: regPointer = &state->R8; break;
+  		case 0x09: printf("Invalid address for long register"); return NULL; break;
+  		case 0x0a: regPointer = &state->R10; break;
+  		case 0x0b: printf("Invalid address for long register"); return NULL; break;
+  		case 0x0c: regPointer = &state->R12; break;
+  		case 0x0d: printf("Invalid address for long register"); return NULL; break;
+  		case 0x0e: regPointer = &state->R14; break;
+  		case 0x0f: printf("Invalid address for long register"); return NULL; break;
+  		default: printf("WRONG"); return regPointer; break;
+  	}
+
+	return regPointer;
+}
+uint64_t* returnQuadRegisterPointer(uint8_t regToFind, State8002* state){
+	uint64_t* regPointer;
+	switch(regToFind){
+		case 0x00: regPointer = &state->R0; break;
+		case 0x01: printf("Invalid address for quad register");	return NULL; break;
+		case 0x02: printf("Invalid address for quad register");	return NULL; break;
+		case 0x03: printf("Invalid address for quad register");	return NULL; break;
+		case 0x04: regPointer = &state->R4; break;
+		case 0x05: printf("Invalid address for quad register");	return NULL; break;
+		case 0x06: printf("Invalid address for quad register");	return NULL; break;
+		case 0x07: printf("Invalid address for quad register");	return NULL; break;
+		case 0x08: regPointer = &state->R8; break;
+		case 0x09: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0a: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0b: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0c: regPointer = &state->R12; break;
+		case 0x0d: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0e: printf("Invalid address for quad register");	return NULL; break;
+		case 0x0f: printf("Invalid address for quad register");	return NULL; break;
+		default: printf("WRONG"); return NULL; break;
+	}
+
+	return regPointer;
 }
 
-void updateFCW(State8002 state){
+void writeZBus(uint16_t data, Pins8002* pins){
+	pins->dataBus = data;
+}
+uint16_t readZBus(Pins8002* pins){
+	return pins->dataBus;
+}
+
+uint8_t readReg8(uint8_t regCode,State8002* state){
+	uint8_t* datap = returnByteRegisterPointer(regCode, state);
+	uint8_t data = fix_8(*datap);
+	return data;
+}
+uint16_t readReg16(uint8_t regCode,State8002* state){
+	uint16_t* datap = returnWordRegisterPointer(regCode, state);
+	uint16_t data = fix_16(*datap);
+	return data;
+}
+uint32_t readReg32(uint8_t regCode,State8002* state){
+	uint32_t* datap = returnLongRegisterPointer(regCode, state);
+	uint32_t data = fix_32(*datap);
+	return data;
+}
+
+void writeReg8(uint8_t regCode, State8002* state, uint8_t data){
+	uint8_t* datap = returnByteRegisterPointer(regCode, state);
+	*datap = fix_8(data);
+}
+void writeReg16(uint8_t regCode, State8002* state, uint16_t data){
+	uint16_t* datap = returnWordRegisterPointer(regCode, state);
+	*datap = fix_16(data);
+}
+void writeReg32(uint8_t regCode, State8002* state, uint32_t data){
+	uint32_t* datap = returnLongRegisterPointer(regCode, state);
+	*datap = fix_32(data);
+}
+
+uint16_t readMem(uint16_t address, State8002* state, Pins8002* pins){
+	pins->addressStrobe = 0;
+	pins->readWrite = 1;
+	writeZBus(address, pins);
+	pins->addressStrobe = 1;
+	pins->memoryREQ = 0;
+	void zBusMemRead(state,pins);
+	pins->dataStrobe = 0;
+	pins->memoryREQ = 1;
+	pins->dataStrobe = 1;
+	return readZBus(pins);
+}
+void writeMem(uint16_t address, uint16_t data, State8002* state, Pins8002* pins){
+	pins->addressStrobe = 0;
+	pins->readWrite = 0;
+	writeZBus(address, pins);
+	pins->addressStrobe = 1;
+	pins->memoryREQ = 0;
+	void zBusMemWrite(data,state,pins){
+	}
+
+}
+
+uint16_t readMem_Instruction(uint16_t address, State8002* state, Pins8002* pins){
+	pins->status = 0b1100;
+	return readMem(address,state,pins);
+}
+uint16_t readMem_Data(uint16_t address, State8002* state, Pins8002* pins){
+	pins->status = 0b1100;
+	return readMem(address,state,pins);
+}
+
+void updateFCW(State8002* state){
 	state->FCW = \
 	(state->cc.h << 2) +
 	(state->cc.d << 3) +
-	(state->cc.p << 4) +
+	(state->cc.v << 4) +
 	(state->cc.s << 5) +
 	(state->cc.z << 6) +
 	(state->cc.c << 7) +
@@ -257,147 +378,8 @@ void findQuadRegister(uint8_t regToFind){
 	return;
 }
 
-uint8_t* returnByteRegisterPointer(uint8_t regToFind, State8002* state){
-	uint8_t* regPointer;
-	switch(regToFind){
-		case 0x00: regPointer = &state->R0; regPointer += 1; break; //Higher
-		case 0x01: regPointer = &state->R1; regPointer += 1; break;
-		case 0x02: regPointer = &state->R2; regPointer += 1; break;
-		case 0x03: regPointer = &state->R3; regPointer += 1; break;
-		case 0x04: regPointer = &state->R4; regPointer += 1; break;
-		case 0x05: regPointer = &state->R5; regPointer += 1; break;
-		case 0x06: regPointer = &state->R6; regPointer += 1; break;
-		case 0x07: regPointer = &state->R7; regPointer += 1; break;
-		case 0x08: regPointer = &state->R0;  break; // Lower
-		case 0x09: regPointer = &state->R1;  break;
-		case 0x0a: regPointer = &state->R2;  break;
-		case 0x0b: regPointer = &state->R3;  break;
-		case 0x0c: regPointer = &state->R4;  break;
-		case 0x0d: regPointer = &state->R5;  break;
-		case 0x0e: regPointer = &state->R6;  break;
-		case 0x0f: regPointer = &state->R7;  break;
-		default: printf("WRONG"); return regPointer; break;
-	}
-  return regPointer;
-}
-uint16_t* returnWordRegisterPointer(uint8_t regToFind, State8002* state){
-  	uint16_t* regPointer;
-  	switch(regToFind){
-  		case 0x00: regPointer = &state->R0; break;
-  		case 0x01: regPointer = &state->R1; break;
-  		case 0x02: regPointer = &state->R2; break;
-  		case 0x03: regPointer = &state->R3; break;
-  		case 0x04: regPointer = &state->R4; break;
-  		case 0x05: regPointer = &state->R5; break;
-  		case 0x06: regPointer = &state->R6; break;
-  		case 0x07: regPointer = &state->R7; break;
-  		case 0x08: regPointer = &state->R8; break;
-  		case 0x09: regPointer = &state->R9; break;
-  		case 0x0a: regPointer = &state->R10; break;
-  		case 0x0b: regPointer = &state->R11; break;
-  		case 0x0c: regPointer = &state->R12; break;
-  		case 0x0d: regPointer = &state->R13; break;
-  		case 0x0e: regPointer = &state->R14; break;
-  		case 0x0f: regPointer = &state->sp; break;
-  		default: printf("WRONG"); return regPointer; break;
-  	}
 
-	return regPointer;
-}
-uint32_t* returnLongRegisterPointer(uint8_t regToFind, State8002* state){
-  	uint32_t* regPointer;
-  	switch(regToFind){
-  		case 0x00: regPointer = &state->R0; break;
-  		case 0x01: printf("Invalid address for long register"); return NULL; break;
-  		case 0x02: regPointer = &state->R2; break;
-  		case 0x03: printf("Invalid address for long register"); return NULL; break;
-  		case 0x04: regPointer = &state->R4; break;
-  		case 0x05: printf("Invalid address for long register"); return NULL; break;
-  		case 0x06: regPointer = &state->R6; break;
-  		case 0x07: printf("Invalid address for long register"); return NULL; break;
-  		case 0x08: regPointer = &state->R8; break;
-  		case 0x09: printf("Invalid address for long register"); return NULL; break;
-  		case 0x0a: regPointer = &state->R10; break;
-  		case 0x0b: printf("Invalid address for long register"); return NULL; break;
-  		case 0x0c: regPointer = &state->R12; break;
-  		case 0x0d: printf("Invalid address for long register"); return NULL; break;
-  		case 0x0e: regPointer = &state->R14; break;
-  		case 0x0f: printf("Invalid address for long register"); return NULL; break;
-  		default: printf("WRONG"); return regPointer; break;
-  	}
-
-	return regPointer;
-}
-
-uint64_t* returnQuadRegisterPointer(uint8_t regToFind, State8002* state){
-	uint64_t* regPointer;
-	switch(regToFind){
-		case 0x00: regPointer = &state->R0; break;
-		case 0x01: printf("Invalid address for quad register");	return NULL; break;
-		case 0x02: printf("Invalid address for quad register");	return NULL; break;
-		case 0x03: printf("Invalid address for quad register");	return NULL; break;
-		case 0x04: regPointer = &state->R4; break;
-		case 0x05: printf("Invalid address for quad register");	return NULL; break;
-		case 0x06: printf("Invalid address for quad register");	return NULL; break;
-		case 0x07: printf("Invalid address for quad register");	return NULL; break;
-		case 0x08: regPointer = &state->R8; break;
-		case 0x09: printf("Invalid address for quad register");	return NULL; break;
-		case 0x0a: printf("Invalid address for quad register");	return NULL; break;
-		case 0x0b: printf("Invalid address for quad register");	return NULL; break;
-		case 0x0c: regPointer = &state->R12; break;
-		case 0x0d: printf("Invalid address for quad register");	return NULL; break;
-		case 0x0e: printf("Invalid address for quad register");	return NULL; break;
-		case 0x0f: printf("Invalid address for quad register");	return NULL; break;
-		default: printf("WRONG"); return NULL; break;
-	}
-
-	return regPointer;
-}
-
-
-
-// void writeZBus(uint16_t data, State8002* state){
-// 	uint8_t status = state->status;
-// 	if (status = 0b1000) { // data space normal mode
-// 		uint16_t* actualAddress = &state->dataSpace_NM + address;
-// 		*actualAddress = data;
-// 	}
-// 	if (status = 0b1010) { // data space normal mode
-// 		uint16_t* actualAddress = &state->dataSpace_SM + address;
-// 		*actualAddress = data;
-// 	}
-// }
-// uint16_t readZBus(uint16_t data, State8002* state){
-// 	uint8_t status = state->status;
-// 	if (status = 0b1000) { // data space normal mode
-// 		uint16_t* actualAddress = &state->dataSpace_NM + address;
-// 		*actualAddress = data;
-// 	}
-// 	if (status = 0b1010) { // data space normal mode
-// 		uint16_t* actualAddress = &state->dataSpace_SM + address;
-// 		*actualAddress = data;
-// 	}
-// }
-// void writeZBus(uint16_t data, Pins8002 pins){
-// 	uint8_t status = state->status;
-//
-// 	if (status = 0b1000) { // data space normal mode
-// 		uint16_t* actualAddress = &state->dataSpace_NM + address;
-// 		*actualAddress = data;
-// 	}
-// 	if (status = 0b1010) { // data space normal mode
-// 		uint16_t* actualAddress = &state->dataSpace_SM + address;
-// 		*actualAddress = data;
-// 	}
-// }
-void writeZBus(uint16_t data, Pins8002 pins){
-	pins->dataBus = data;
-}
-uint16_t readZBus(Pins8002 pins){
-	return pins->dataBus;
-}
-
-void zBusMemRead(State8002 state, Pins8002 pins){ //zbus mem request
+void zBusMemRead(State8002* state, Pins8002* pins){ //zbus mem request
 	uint8_t status = pins->status;
 	uint8_t evenOdd = pins->dataBus % 2;
 	if(pins->readWrite == 1 && pins->memoryREQ == 0){// memory request, read into processor
@@ -441,7 +423,7 @@ void zBusMemRead(State8002 state, Pins8002 pins){ //zbus mem request
 
 	}
 }
-void zBusMemWrite(uint16_t data,State8002 state, Pins8002 pins){
+void zBusMemWrite(uint16_t data,State8002* state, Pins8002* pins){
 	uint8_t status = pins->status;
 	uint8_t evenOdd = pins->dataBus % 2;
 	uint16_t address = pins->dataBus;
@@ -481,7 +463,7 @@ void zBusMemWrite(uint16_t data,State8002 state, Pins8002 pins){
 				pins->dataBus = data << 8;
 			}
 			else{
-				pins->databus = data & 0x00FF;
+				pins->dataBus = data & 0x00FF;
 			}
 			uint8_t datatemp = data & 0x00FF;
 
@@ -516,18 +498,22 @@ void zBusMemWrite(uint16_t data,State8002 state, Pins8002 pins){
 	}
 }
 
-
-
 void UnimplementedInstruction(State8002* state){
 	//pc will have advanced one, so undo that
 	printf("\tError: Unimplemented instruction\n");
 	state->pc-=2;
-	Disassemble8002(state->memory, state->pc);
+	//Disassemble8002(state->memory, state->pc);
 	printf("\n");
 	exit(1);
 }
-int Disassemble8002(uint16_t *codebuffer, int pc){
-	uint16_t *code = &codebuffer[pc/2];
+
+int Disassemble8002(uint16_t instruction, State8002* state, Pins8002* pins){
+	//uint16_t *code = &codebuffer[pc/2];
+	uint16_t code[3];
+	code[0] = instruction;
+	code[1] = readMem_Instruction(state->pc + 2,state,pins);
+	code[2] = readMem_Instruction(state->pc + 4,state,pins);
+	uint16_t pc = state->pc;
 
 	uint8_t upperHalf = code[0] >> 8;
 	uint8_t lowerHalf = code[0];
@@ -2602,30 +2588,34 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 
 void pushNorm(uint16_t data,State8002* state){
 	state->sp_NM += -2;
-	state->stack_NM[sysSP] = fix_16(data);
+	state->stack_NM[state->sp_NM] = fix_16(data);
 }
 uint16_t popNorm(State8002* state){
 	state->sp_NM += 2;
-	return fix_16(state->stack_NM[sysSP-2]);
+	return fix_16(state->stack_NM[sp_NM-2]);
 }
 void pushSys(uint16_t data,State8002* state){
 	state->sp_SM += -2;
-	state->stack_SM[sysSP] = fix_16(data);
+	state->stack_SM[sp_SM] = fix_16(data);
 }
 uint16_t popSys(State8002* state){
 	state->sp_SM += 2;
-	return fix_16(state->stack_SM[sysSP-2]);
+	return fix_16(state->stack_SM[sp_NM-2]);
 }
 
-void systemCall(State8002 state, uint16_t identifier){
+void systemCall(State8002* state, uint16_t identifier){
 	pushSys(state->pc, state);
 	updateFCW(state);
 	pushSys(state->FCW);
 	pushSys(identifier);
 	state->systemNormal = 1;
 }
-int Emulate8002(State8002* state){
-	uint16_t *opcode = &state->memory[state->pc/2];
+
+int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
+	uint16_t opcode[3];
+	opcode[0] = instruction;
+	opcode[1] = readMem_Instruction(state->pc + 2,state,pins);
+	opcode[2] = readMem_Instruction(state->pc + 4,state,pins);
 
 
 
@@ -2639,7 +2629,7 @@ int Emulate8002(State8002* state){
 	uint8_t field1 = (opcode[0] >> 4) & (0x0F);
 	uint8_t field2 = opcode[0] & 0x0F;
 
-	Disassemble8002(state->memory, state->pc);
+
 
 	//state->memory[0] = 2;
 
@@ -3496,7 +3486,6 @@ State8002* InitState(void){
 	state->norm_SP = 0x10000;
 
 	state->SN = 0;
-	state->NS = 1;
 	state->NVIE = 0;
 	state->VIE = 0;
 	state->EPA = 0;
@@ -3555,14 +3544,14 @@ int main (int argc, char**argv){
 
 	ReadFileIntoMemoryAt(state, "testFormat.t", 0);
 	//ReadFileIntoMemoryAt(state, "jr.t", 2);
-	pins->status = 0b1100;
+
 
 	while (done == 0){
 
-
-		readMem(state->pc,state)
-
-		done = Emulate8002(state);
+		uint16_t instruction = readMem_Instruction(state->pc,state,pins);
+		printf("%04x\n",instruction);
+		Disassemble8002(instruction,state, pins);
+		done = Emulate8002(instruction,state, pins);
 
 	}
 	return 0;
