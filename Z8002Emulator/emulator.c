@@ -1585,10 +1585,10 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 
 									} break;
 						case 0x5e:	switch(field1){
-										case 0x00:	printf("JP %02x, %04x", field2, code[1]);	//JP cc, address
+										case 0x00:	printf("JP %01x, %04x", field2, code[1]);	//JP cc, address
 													opwords = 2;
 													break;
-										default:	printf("JP %02x, %04x(", field2, code[1]);	//JP cc, address(Rd)
+										default:	printf("JP %01x, %04x(", field2, code[1]);	//JP cc, address(Rd)
 													findRegister(field1);
 													printf(")");
 													opwords = 2;
@@ -3372,7 +3372,13 @@ int Emulate8002(State8002* state){
 				case 0x5b: UnimplementedInstruction(state);	break;
 				case 0x5c: UnimplementedInstruction(state);	break;
 				case 0x5d: UnimplementedInstruction(state); break;
-				case 0x5e: UnimplementedInstruction(state);	break;
+				case 0x5e: {	//JP CC, address
+								if(checkConditionCode(field2, state->cc)){
+									state->pc = opcode[1];
+								} else{
+									state->pc += 2;
+								}
+							}	break;
 				case 0x5f: {	
 								if(field1 == 0){	//CALL address
 									state->sp -= 2;
@@ -3426,7 +3432,10 @@ int Emulate8002(State8002* state){
 								writeReg16(field2, state, res);
 		    				} break;
 				case 0x82: UnimplementedInstruction(state);	break;
-				case 0x83: UnimplementedInstruction(state);	break;
+				case 0x83: {	//SUB Rd, Rs
+								uint16_t res = readReg16(field2, state) - readReg16(field1, state);
+								writeReg16(field2, state, res);
+							}	break;
 				case 0x84: UnimplementedInstruction(state);	break;
 				case 0x85: UnimplementedInstruction(state);	break;
 				case 0x86: UnimplementedInstruction(state);	break;
@@ -3440,12 +3449,8 @@ int Emulate8002(State8002* state){
 							
 								setCarryFlag(dest, src, upperHalf, field1, state);
 								setSignFlag(dest, src, upperHalf, field1, state);
-								setOverflowFlag(dest, src, upperHalf, field1, state);
-
-							 	uint32_t result = dest - src;
-								 
-								state->cc.z = (result == 0);
-
+								setOverflowFlag(dest, src, upperHalf, field1, state);					 
+								state->cc.z = (dest - src == 0);
 							} break;
 				case 0x8c: UnimplementedInstruction(state);	break;
 				case 0x8d: UnimplementedInstruction(state);	break;
