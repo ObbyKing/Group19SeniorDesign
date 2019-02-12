@@ -408,6 +408,11 @@ uint32_t readReg32(uint8_t regCode,State8002* state){
 	uint32_t data = fix_32(*datap);
 	return data;
 }
+uint64_t readReg64(uint8_t regCode,State8002* state){
+	uint64_t* datap = returnLongRegisterPointer(regCode, state);
+	uint64_t data = fix_64(*datap);
+	return data;
+}
 
 void writeReg8(uint8_t regCode, State8002* state, uint8_t data){
 	uint8_t* datap = returnByteRegisterPointer(regCode, state);
@@ -421,6 +426,10 @@ void writeReg32(uint8_t regCode, State8002* state, uint32_t data){
 	uint32_t* datap = returnLongRegisterPointer(regCode, state);
 	*datap = fix_32(data);
 }
+void writeReg64(uint8_t regCode, State8002* state, uint64_t data){
+	uint64_t* datap = returnLongRegisterPointer(regCode, state);
+	*datap = fix_64(data);
+}
 
 uint16_t readMem(uint16_t address, State8002* state, Pins8002* pins){
 	pins->addressStrobe = 0;
@@ -428,7 +437,7 @@ uint16_t readMem(uint16_t address, State8002* state, Pins8002* pins){
 	writeZBus(address, pins);
 	pins->addressStrobe = 1;
 	pins->memoryREQ = 0;
-	void zBusMemRead(state,pins);
+	zBusMemRead(state,pins);
 	pins->dataStrobe = 0;
 	pins->memoryREQ = 1;
 	pins->dataStrobe = 1;
@@ -440,8 +449,8 @@ void writeMem(uint16_t address, uint16_t data, State8002* state, Pins8002* pins)
 	writeZBus(address, pins);
 	pins->addressStrobe = 1;
 	pins->memoryREQ = 0;
-	void zBusMemWrite(data,state,pins){
-	}
+	zBusMemWrite(data,state,pins);
+
 
 }
 
@@ -453,9 +462,9 @@ uint16_t readMem_Data(uint16_t address, State8002* state, Pins8002* pins){
 	pins->status = 0b1000;
 	return readMem(address,state,pins);
 }
-uint16_t writeMem_Data(uint16_t address, uint16_t data, State8002* state, Pins8002* pins){
+void writeMem_Data(uint16_t address, uint16_t data, State8002* state, Pins8002* pins){
 	pins->status = 0b1000;
-	return writeMem(address,data,state,pins);
+	writeMem(address,data,state,pins);
 }
 
 void updateFCW(State8002* state){
@@ -496,16 +505,7 @@ bool checkConditionCode(uint8_t cc,ConditionCodes o){
 	}
 }
 
-int parity(int x, int size){
-	int i;
-	int p = 0;
-	x = (x & ((1<<size)-1));
-	for (i=0; i<size; i++){
-		if (x & 0x1) p++;
-		x = x >> 1;
-	}
-	return (0 == (p & 0x1));
-}
+
 void findregRegister(uint8_t regToFind){
 	switch(regToFind){
 		case 0x00: printf("RH0"); break;
@@ -577,6 +577,7 @@ void findQuadRegister(uint8_t regToFind){
 void zBusMemRead(State8002* state, Pins8002* pins){ //zbus mem request
 	uint8_t status = pins->status;
 	uint8_t evenOdd = pins->dataBus % 2;
+
 	if(pins->readWrite == 1 && pins->memoryREQ == 0){// memory request, read into processor
 		if(evenOdd == 1) // makes all addresses even, puts 16 bits in the register, then masks if byteWord is high
 			pins->dataBus += 1;
@@ -584,26 +585,27 @@ void zBusMemRead(State8002* state, Pins8002* pins){ //zbus mem request
 		if(pins->normalSystem == 1){
 				switch (status){
 					case 0b1000:{// data memory
-						pins->dataBus = fix_16(state->dataSpace_NM[pins->dataBus]);
+						pins->dataBus = fix_16(*(uint16_t*)&state->dataSpace_NM[pins->dataBus]);
 					}
 					case 0b1001:{// stack memory
-						pins->dataBus = fix_16(state->stack_NM[pins->dataBus]);
+						pins->dataBus = fix_16(*(uint16_t*)&state->stack_NM[pins->dataBus]);
 					}
 					case 0b1100:{// instruction memory
-						pins->dataBus = fix_16(state->instructionSpace_NM[pins->dataBus]);
+						pins->dataBus = fix_16(*(uint16_t*)&state->instructionSpace_NM[pins->dataBus]);
+
 					}
 				}
 			}
 		else if(pins->normalSystem == 0){
 				switch (status){
 					case 0b1000:{// data memory
-						pins->dataBus = fix_16(state->dataSpace_SM[pins->dataBus]);
+						pins->dataBus = fix_16(*(uint16_t*)&state->dataSpace_SM[pins->dataBus]);
 					}
 					case 0b1001:{// stack memory
-						pins->dataBus = fix_16(state->stack_SM[pins->dataBus]);
+						pins->dataBus = fix_16(*(uint16_t*)&state->stack_SM[pins->dataBus]);
 					}
 					case 0b1100:{// instruction memory
-						pins->dataBus = fix_16(state->instructionSpace_SM[pins->dataBus]);
+						pins->dataBus = fix_16(*(uint16_t*)&state->instructionSpace_SM[pins->dataBus]);
 					}
 				}
 			}
@@ -2787,21 +2789,21 @@ void pushNorm(uint16_t data,State8002* state){
 }
 uint16_t popNorm(State8002* state){
 	state->sp_NM += 2;
-	return fix_16(state->stack_NM[sp_NM-2]);
+	return fix_16(state->stack_NM[state->sp_NM-2]);
 }
 void pushSys(uint16_t data,State8002* state){
 	state->sp_SM += -2;
-	state->stack_SM[sp_SM] = fix_16(data);
+	state->stack_SM[state->sp_SM] = fix_16(data);
 }
 uint16_t popSys(State8002* state){
 	state->sp_SM += 2;
-	return fix_16(state->stack_SM[sp_NM-2]);
+	return fix_16(state->stack_SM[state->sp_NM-2]);
 }
 
 void systemCall(State8002* state, uint16_t identifier){
 	pushSys(state->pc, state);
 	updateFCW(state);
-	pushSys(state->FCW);
+	pushSys(state->FCW,state);
 	pushSys(identifier,state);
 	state->systemNormal = 1;
 }
@@ -3861,11 +3863,7 @@ void ReadFileIntoMemoryAt(State8002* state, char* filename, uint32_t offset){
 	uint8_t *buffer = &state->instructionSpace_NM[offset];
 	fread(buffer, fsize, 1, f);
 	fclose(f);
-	uint16_t *memptr = &state->instructionSpace_NM[offset];
 
-	for(uint16_t i = 0; i < fsize/2; i++){
-	 	memptr[i] = buffer[i*2+1] + (buffer[i*2] << 8);
-	}
 }
 
 State8002* InitState(void){
@@ -3954,10 +3952,11 @@ int main (int argc, char**argv){
 	while (done == 0){
 
 		uint16_t instruction = readMem_Instruction(state->pc,state,pins);
-		printf("%04x\n",instruction);
-		Disassemble8002(instruction,state, pins);
-		done = Emulate8002(instruction,state, pins);
 
+		printf("%04x\n", state->pc);
+		printf("%04x\n",instruction);
+		//Disassemble8002(instruction,state, pins);
+		done = Emulate8002(instruction,state, pins);
 	}
 	return 0;
 }
