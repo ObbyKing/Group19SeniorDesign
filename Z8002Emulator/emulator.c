@@ -74,7 +74,7 @@ typedef struct Pins8002{
 
 	uint8_t vectorInterupt;
 	uint8_t nonVectorInterupt;
-	
+
 	uint16_t dataBus;
 }Pins8002;
 
@@ -420,8 +420,12 @@ uint16_t readMem_Instruction(uint16_t address, State8002* state, Pins8002* pins)
 	return readMem(address,state,pins);
 }
 uint16_t readMem_Data(uint16_t address, State8002* state, Pins8002* pins){
-	pins->status = 0b1100;
+	pins->status = 0b1000;
 	return readMem(address,state,pins);
+}
+uint16_t writeMem_Data(uint16_t address, uint16_t data, State8002* state, Pins8002* pins){
+	pins->status = 0b1000;
+	return writeMem(address,data,state,pins);
 }
 
 void updateFCW(State8002* state){
@@ -539,7 +543,6 @@ void findQuadRegister(uint8_t regToFind){
 	}
 	return;
 }
-
 
 void zBusMemRead(State8002* state, Pins8002* pins){ //zbus mem request
 	uint8_t status = pins->status;
@@ -2847,9 +2850,9 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
 									if(field2 <= 7){
-										res += state->memory[offset] >> 8; //Higher
+										res += readMem_Data(offset,state,pins) >> 8; //Higher
 									} else{
-										res += state->memory[offset]; //Lower
+										res += readMem_Data(offset,state,pins); //Lower
 									}
 									writeReg8(field2, state, res);
 								}
@@ -2864,7 +2867,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								else{ 				//ADD Rd, @Rs
 									uint16_t res = readReg16(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res += state->memory[offset];
+									res += readMem_Data(offset,state,pins);
 									writeReg16(field2, state, res);
 								}
 							} break;
@@ -2882,9 +2885,9 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
 									if(field2 <= 7){
-										res -= state->memory[offset] >> 8; //Higher
+										res -= readMem_Data(offset,state,pins) >> 8; //Higher
 									} else{
-										res -= state->memory[offset];	//Lower
+										res -= readMem_Data(offset,state,pins);	//Lower
 									}
 									writeReg8(field2, state, res);
 								}
@@ -2897,7 +2900,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else {			// SUB Rd, @Rs
 									uint16_t res = readReg16(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res -= state->memory[offset];
+									res -= readMem_Data(offset,state,pins);
 									writeReg16(field2, state, res);
 								}
 							} break;
@@ -2915,9 +2918,9 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
 									if(field2 <= 7){
-										res = res | (state->memory[offset] >> 8); //Higher
+										res = res | (readMem_Data(offset,state,pins) >> 8); //Higher
 									} else{
-										res = res | state->memory[offset];	//Lower
+										res = res | readMem_Data(offset,state,pins);	//Lower
 									}
 									writeReg8(field2, state, res);
 								}
@@ -2930,7 +2933,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{				//OR Rd, @Rs
 									uint16_t res = readReg16(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res | state->memory[offset];
+									res = res | readMem_Data(offset,state,pins);
 									writeReg16(field2, state, res);
 								}
 							}	break;
@@ -2948,9 +2951,9 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
 									if(field2 <= 7){
-										res = res & (state->memory[offset] >> 8);	//Higher
+										res = res & (readMem_Data(offset,state,pins) >> 8);	//Higher
 									} else {
-										res = res & state->memory[offset];	//Lower
+										res = res & readMem_Data(offset,state,pins);	//Lower
 									}
 									writeReg8(field2, state, res);
 								}
@@ -2963,7 +2966,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{				//AND Rd, @Rs
 									uint16_t res = readReg16(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res & state->memory[offset];
+									res = res & readMem_Data(offset,state,pins);
 									writeReg16(field2, state, res);
 								}
 							}	break;
@@ -2981,9 +2984,9 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
 									if(field2 <= 7){
-										res = res ^ (state->memory[offset] >> 8);	//Higher
+										res = res ^ (readMem_Data(offset,state,pins) >> 8);	//Higher
 									} else{
-										res = res ^ state->memory[offset];	//Lower
+										res = res ^ readMem_Data(offset,state,pins);	//Lower
 									}
 									writeReg8(field2, state, res);
 								}
@@ -2996,7 +2999,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{				//XOR Rd, @Rs
 									uint16_t res = readReg16(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res ^ state->memory[offset];
+									res = res ^ readMem_Data(offset,state,pins);
 									writeReg16(field2, state, res);
 								}
 							}	break;
@@ -3016,9 +3019,9 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									uint8_t res = readReg8(field2, state);
 									uint16_t offset = readReg16(field1, state);
 									if(field2 <= 7){
-										res -= state->memory[offset] >> 8;	//Higher
+										res -= readMem_Data(offset,state,pins) >> 8;	//Higher
 									} else{
-										res -= state->memory[offset];
+										res -= readMem_Data(offset,state,pins);
 									}
 								}
 							}	break;
@@ -3029,62 +3032,80 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{				//CP Rd, @Rs
 									uint16_t res = readReg16(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res -= state->memory[offset];
+									res -= readMem_Data(offset,state,pins);
 								}
 							}	break;
 				case 0x0c: {
 								switch(field2){
 									case 0x00:	{uint16_t offset = readReg16(field1, state);	//COMB @Rd
 												if(field1 <= 7){
-													state->memory[offset] = (~state->memory[offset] & 0xFF00) | (state->memory[offset] & 0x00FF);	//Higher
+													uint16_t out = (~readMem_Data(offset,state,pins) & 0xFF00) | (readMem_Data(offset,state,pins) & 0x00FF);	//Higher
+													writeMem_Data(offset,out,state,pins);
 												} else{
-													state->memory[offset] = (state->memory[offset] & 0xFF00) | (~state->memory[offset] & 0x00FF);	//Lower
+													uint16_t out = (readMem_Data(offset,state,pins) & 0xFF00) | (~readMem_Data(offset,state,pins) & 0x00FF);	//Lower
+													writeMem_Data(offset,out,state,pins);
 												}
 												}	break;
 									case 0x01:	{uint16_t offset = readReg16(field1, state);	//CPB @Rd, #data
 												if(field1 <= 7){
-													uint8_t res = (state->memory[offset] >> 8) - (opcode[1] >> 8);	//Higher
+													uint8_t res = (readMem_Data(offset,state,pins) >> 8) - (opcode[1] >> 8);	//Higher
 												} else{
-													uint8_t res = state->memory[offset] - opcode[1];				//Lower
+													uint8_t res = readMem_Data(offset,state,pins) - opcode[1];				//Lower
 												}
 												state->pc += 2;
 												}break;
 									case 0x02:	{uint16_t offset = readReg16(field1, state);	//NEGB @Rd
 												if(field1 <= 7){
-													state->memory[offset] = (0 - (state->memory[offset]>>8)) | (state->memory[offset] & 0x00FF);	//Higher
+													uint16_t out = (0 - (readMem_Data(offset,state,pins)>>8)) | (readMem_Data(offset,state,pins) & 0x00FF);	//Higher
+													writeMem_Data(offset,out,state,pins);
 												} else{
-													state->memory[offset] = (state->memory[offset] & 0xFF00) | (0 - (state->memory[offset]));		//Lower
+													uint16_t out = (readMem_Data(offset,state,pins) & 0xFF00) | (0 - (readMem_Data(offset,state,pins)));		//Lower
+													writeMem_Data(offset,out,state,pins);
 												}
 												}break;
 									case 0x04:	{uint16_t offset = readReg16(field1, state);	//TESTB @Rd
 												if(field1 <= 7){
-													state->memory[offset] = ((state->memory[offset] >> 8) | 0) | (state->memory[offset] & 0x00FF);	//Higher
+													uint16_t out = ((readMem_Data(offset,state,pins) >> 8) | 0) | (readMem_Data(offset,state,pins) & 0x00FF);	//Higher
+													writeMem_Data(offset,out,state,pins);
 												} else{
-													state->memory[offset] = (state->memory[offset] & 0xFF00) | (state->memory[offset] | 0);
+													uint16_t out = (readMem_Data(offset,state,pins) & 0xFF00) | (readMem_Data(offset,state,pins) | 0);
+													writeMem_Data(offset,out,state,pins);
 												}
 												}break;
 									case 0x5:	{uint16_t offset = readReg16(field1, state);	//LDB @Rd, #data
 												if(field1 <= 7){
-													state->memory[offset] = (opcode[1]>>8) | (state->memory[offset] & 0x00FF);	//Higher
+													uint16_t out = (opcode[1]>>8) | (readMem_Data(offset,state,pins) & 0x00FF);	//Higher
+													writeMem_Data(offset,out,state,pins);
+
 												} else{
-													state->memory[offset] = (state->memory[offset] & 0xFF00) | (opcode[1]);		//Lower
+													uint16_t out = (readMem_Data(offset,state,pins) & 0xFF00) | (opcode[1]);		//Lower
+													writeMem_Data(offset,out,state,pins);
+
 												}
 												state->pc += 2;
 												}break;
 									case 0x6:	{uint16_t offset = readReg16(field1, state);	//TSETB @Rd
 												if(field1 <= 7){
-													state->cc.s = (state->memory[offset] & 0x8000) >> 15;
-													state->memory[offset] = 0xFF | (state->memory[offset] & 0x00FF);
+													state->cc.s = (readMem_Data(offset,state,pins) & 0x8000) >> 15;
+													uint16_t out = 0xFF | (readMem_Data(offset,state,pins) & 0x00FF);
+													writeMem_Data(offset,out,state,pins);
+
 												} else{
-													state->cc.s = (state->memory[offset] & 0x0080) >> 8;
-													state->memory[offset] = (state->memory[offset] & 0xFF00) | 0xFF;
+													state->cc.s = (readMem_Data(offset,state,pins) & 0x0080) >> 8;
+													uint16_t out = (readMem_Data(offset,state,pins) & 0xFF00) | 0xFF;
+													writeMem_Data(offset,out,state,pins);
+
 												}
 												}break;
 									case 0x8:	{uint16_t offset = readReg16(field1, state);	//CLRB @Rd
 												if(field1 <= 7){
-													state->memory[offset] = state->memory[offset] & 0x00FF;	//Higher
+													uint16_t out = readMem_Data(offset,state,pins) & 0x00FF;	//Higher
+													writeMem_Data(offset,out,state,pins);
+
 												} else{
-													state->memory[offset] = state->memory[offset] & 0xFF00;	//Lower
+													uint16_t out = readMem_Data(offset,state,pins) & 0xFF00;	//Lower
+													writeMem_Data(offset,out,state,pins);
+
 												}
 												}break;
 									default:	UnimplementedInstruction(state); break;
@@ -3093,34 +3114,44 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0x0d: {
 								switch(field2){
 									case 0x0:	{uint16_t offset = readReg16(field1, state);	//COM @Rd
-												state->memory[offset] = ~state->memory[offset];
+												uint16_t out = ~readMem_Data(offset,state,pins);
+												writeMem_Data(offset,out,state,pins);
+
 									}break;
 									case 0x1:	{uint16_t offset = readReg16(field1, state);	//CP @Rd, #data
-												uint16_t res = state->memory[offset] - opcode[1];
+												uint16_t res = readMem_Data(offset,state,pins) - opcode[1];
 												state->pc += 2;
 									}break;
 									case 0x2:	{uint16_t offset = readReg16(field1, state);	//NEG @Rd
-												state->memory[offset] = 0 - state->memory[offset];
+												uint16_t out = 0 - readMem_Data(offset,state,pins);
+												writeMem_Data(offset,out,state,pins);
+
 									}break;
 									case 0x4:	{uint16_t offset = readReg16(field1, state);
-												uint16_t res = state->memory[offset] | 0;
+												uint16_t res = readMem_Data(offset,state,pins) | 0;
 									}break;
 									case 0x5:	{uint16_t offset = readReg16(field1, state);	//LD @Rd, #data
-												state->memory[offset] = opcode[1];
+												uint16_t out = opcode[1];
+												writeMem_Data(offset,out,state,pins);
+
 												state->pc += 2;
 									}break;
 									case 0x6:	{uint16_t offset = readReg16(field1, state);	//TSET @Rd
 												state->cc.s = (offset >> 15);
-												state->memory[offset] = 0xFFFF;
+												uint16_t out = 0xFFFF;
+												writeMem_Data(offset,out,state,pins);
+
 									}break;
 									case 0x8:	{uint16_t offset = readReg16(field1, state);	//CLR @Rd
-												state->memory[offset] = 0;
+												uint16_t out = 0;
+												writeMem_Data(offset,out,state,pins);
+
 									}break;
 									case 0x9:	{uint16_t temp = opcode[1];					//PUSH @Rd, #data
 												uint16_t dest = readReg16(field1, state);
 												dest -= 2;
 												writeReg16(field1, state, dest);
-												state->memory[dest] = temp;
+												writeMem_Data(dest,temp,state,pins);
 												state->pc += 2;
 									}break;
 									default:	UnimplementedInstruction(state); break;
@@ -3130,11 +3161,11 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0x0f: UnimplementedInstruction(state); break;
 				case 0x10: UnimplementedInstruction(state);	break; //TODO
 				case 0x11: {		// PUSHL @Rd, @Rs TODO
-								uint32_t* dReg32 = returnLongRegisterPointer(field1, state);
-								uint32_t* sReg32 = returnLongRegisterPointer(field2, state);
-								uint32_t* temp = state->memory[*sReg32];
-								state->memory[*dReg32] = state->memory[*dReg32] - 4;
-								state->memory[*dReg32] = *temp;
+								//uint32_t* dReg32 = returnLongRegisterPointer(field1, state);
+								//uint32_t* sReg32 = returnLongRegisterPointer(field2, state);
+								//uint32_t* temp = state->memory[*sReg32];
+								//state->memory[*dReg32] = state->memory[*dReg32] - 4;
+								//state->memory[*dReg32] = *temp;
 								//This might be wrong
 							}	break;
 				case 0x12: {
@@ -3145,7 +3176,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{				//SUBL RRd, @Rs
 									uint32_t res = readReg32(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res - state->memory[offset];
+									res = res - readMem_Data(offset,state,pins);
 									writeReg32(field2, state, res);
 								}
 							}	break;
@@ -3154,7 +3185,8 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								uint16_t dest = readReg16(field1, state);
 								dest -= 2;
 								writeReg16(field1, state, dest);
-								state->memory[dest] = state->memory[src];
+								uint16_t temp = readMem_Data(src,data,pins);
+								writeMem_Data(dest,temp,data,pins);
 							}	break;
 				case 0x14: {
 								if(field1 == 0){	//LDL RRd, #data
@@ -3162,15 +3194,15 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									state->pc += 4;
 								} else{				//LDL RRd, @Rs
 									uint16_t offset = readReg16(field1, state);
-									writeReg32(field2, state, state->memory[offset]);
+									writeReg32(field2, state, readMem_Data(offset,state,pins));
 								}
 							}	break;
 				case 0x15: {	//POPL @Rd, @Rs
-								uint16_t src = readReg16(field1, state);
-								uint16_t dest = readReg16(field2, state);
-								state->memory[dest] = state->memory[src];
-								src += 4;
-								writeReg32(field1, state, src);
+								// uint16_t src = readReg16(field1, state);
+								// uint16_t dest = readReg16(field2, state);
+								// state->memory[dest] = state->memory[src];
+								// src += 4;
+								// writeReg32(field1, state, src);
 							}	break;
 				case 0x16: {//ADDL IM or IR
 								if(field1 == 0){	//ADDL RRd, #data
@@ -3180,16 +3212,16 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{ 			//ADDL RRd, @Rs
 									uint32_t res = readReg32(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res + state->memory[offset];
+									res = res + readMem_Data(offset,state,pins);
 									writeReg32(field2, state, res);
 								}
 							} break;
 				case 0x17: {	//POP @Rd, @Rs
-								uint16_t src = readReg16(field1, state);
-								uint16_t dest = readReg16(field2, state);
-								state->memory[dest] = state->memory[src];
-								src += 2;
-								writeReg16(field1, state, src);
+								// uint16_t src = readReg16(field1, state);
+								// uint16_t dest = readReg16(field2, state);
+								// state->memory[dest] = state->memory[src];
+								// src += 2;
+								// writeReg16(field1, state, src);
 							}	break;
 				case 0x18: {
 								if(field1 == 0){	//MULTL RQd, #data
@@ -3199,7 +3231,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{				//MULTL RQd, @Rs
 									uint64_t res = readReg64(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res * state->memory[offset];
+									res = res * readMem_Data(offset,state,pins);
 									writeReg64(field2, state, res);
 								}
 							} break;
@@ -3211,7 +3243,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{				//MULT RRd, @Rs
 									uint32_t res = readReg32(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res * state->memory[offset];
+									res = res * readMem_Data(offset,state,pins);
 									writeReg32(field2, state, res);
 								}
 							}	break;
@@ -3223,7 +3255,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{				//DIVL RQd, @Rs
 									uint64_t res = readReg64(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res / state->memory[offset];
+									res = res / readMem_Data(offset,state,pins);
 									writeReg64(field2, state, res);
 								}
 							}	break;
@@ -3235,7 +3267,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								} else{				//DIV RRd, @Rs
 									uint32_t res = readReg32(field2, state);
 									uint16_t offset = readReg16(field1, state);
-									res = res / state->memory[offset];
+									res = res / readMem_Data(offset,state,pins);
 									writeReg32(field2, state, res);
 								}
 							}	break;
@@ -3248,7 +3280,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0x1e: {	//JP cc, @Rd
 								uint16_t offset = readReg16(field1, state);
 								if(checkConditionCode(field2, state->cc)){
-									state->pc = state->memory[offset];
+									state->pc = readMem_Data(offset,state,pins);
 								}
 							} break;
 				case 0x1f: {	//CALL @Rd
@@ -3267,7 +3299,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									state->pc += 2;
 								} else{				//LDB Rbd, @Rs
 									uint16_t offset = readReg16(field1, state);
-									writeReg8(field2, state, state->memory[offset]);
+									writeReg8(field2, state, readMem_Data(offset,state,pins));
 								}
 							}	break;
 				case 0x21: {
@@ -3276,7 +3308,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									state->pc += 2;
 								} else{				//Ld Rd, @Rs
 									uint16_t offset = readReg16(field1, state);
-									writeReg16(field2, state, state->memory[offset]);
+									writeReg16(field2, state, readMem_Data(offset,state,pins));
 								}
 							} break;
 				case 0x22: UnimplementedInstruction(state); break;
@@ -3288,50 +3320,71 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0x28: {	//INCB @Rd, #n
 								uint16_t offset = readReg16(field1, state);
 								if(field1 <= 7){
-									state->memory[offset] = ((state->memory[offset] >> 8) + field2) | (state->memory[offset] & 0x00FF);	//Higher
+									uint16_t out = ((readMem_Data(offset,state,pins) >> 8) + field2) | (readMem_Data(offset,state,pins) & 0x00FF);	//Higher
+									writeMem_Data(offset,out,state,pins);
+
 								} else{
-									state->memory[offset] = (state->memory[offset] & 0xFF00) | (state->memory[offset] + field2);		//Lower
+									uint16_t out = (readMem_Data(offset,state,pins) & 0xFF00) | (readMem_Data(offset,state,pins) + field2);		//Lower
+									writeMem_Data(offset,out,state,pins);
+
 								}
 							}	break;
 				case 0x29: {	//INC @Rd, #n
 								uint16_t offset = readReg16(field1, state);
-								state->memory[offset] += field2;
+								uint16_t out += field2;
+
+								writeMem_Data(offset,out,state,pins);
+
 							}	break;
 				case 0x2a: {	//DECB @Rd, #n
 								uint16_t offset = readReg16(field1, state);
 								if(field1 <= 7){
-									state->memory[offset] = ((state->memory[offset] >> 8) - field2) | (state->memory[offset] & 0x00FF);	//Higher
+									uint16_t out = ((readMem_Data(offset,state,pins) >> 8) - field2) | (readMem_Data(offset,state,pins) & 0x00FF);	//Higher
+									writeMem_Data(offset,out,state,pins);
+
 								} else{
-									state->memory[offset] = (state->memory[offset] & 0xFF00) | (state->memory[offset] - field2);		//Lower
+									uint16_t out = (readMem_Data(offset,state,pins) & 0xFF00) | (readMem_Data(offset,state,pins) - field2);		//Lower
+									writeMem_Data(offset,out,state,pins);
+
 								}
 							}	break;
 				case 0x2b: {	//DEC @Rd, #n
 								uint16_t offset = readReg16(field1, state);
-								state->memory[offset] -= field2;
+								uint16_t out -= field2;
+								writeMem_Data(offset,out,state,pins);
+
 							}	break;
 				case 0x2c: {	//EXB Rbd, @Rs
 								uint8_t dest = readReg8(field2, state);
 								uint16_t offset = readReg16(field1, state);
-								uint16_t temp = state->memory[offset];
-								state->memory[offset] = temp; //TODO?
+								uint16_t temp = readMem_Data(offset,state,pins);
+								uint16_t out = temp; //TODO?
+								writeMem_Data(offset,out,state,pins);
+
 								writeReg8(field2, state, temp);
 							}	break;
 				case 0x2d: {	//EX Rd, @Rs
 								uint16_t dest = readReg16(field2, state);
 								uint16_t offset = readReg16(field1, state);
-								uint16_t temp = state->memory[offset];
-								state->memory[offset] = temp; //TODO?
+								uint16_t temp = readMem_Data(offset,state,pins);
+								uint16_t out = temp; //TODO?
+								writeMem_Data(offset,out,state,pins);
+
 								writeReg16(field2, state, temp);
 							}	break;
 				case 0x2e: {	//LDB @Rd, Rbs
 								uint8_t source = readReg8(field2, state);
 								uint16_t offset = readReg16(field1, state);
-								state->memory[offset] = source; //TODO?
+								uint16_t out = source; //TODO?
+								writeMem_Data(offset,out,state,pins);
+
 							}	break;
 				case 0x2f: {	//LD @Rd, Rs
 								uint16_t source = readReg16(field2, state);
 								uint16_t offset = readReg16(field1, state);
-								state->memory[offset] = source; //TODO?
+								uint16_t out = source; //TODO?
+								writeMem_Data(offset,out,state,pins);
+
 							}	break;
 				case 0x30: UnimplementedInstruction(state); break; //TODO
 				case 0x31: UnimplementedInstruction(state);	break; //TODO
@@ -3607,7 +3660,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									uint16_t offset = readReg16(field1, state);
 									state->pc -= 2;
 									state->memory[state->sp] = state->pc;
-									state->pc = state->memory[offset];	//TODO?
+									state->pc = readMem_Data(offset,state,pins);	//TODO?
 								}
 							}	break;
 				case 0x60: UnimplementedInstruction(state); break;
