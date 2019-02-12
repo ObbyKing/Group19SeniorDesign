@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-//#include <arpa/inet.h>
-#include <winsock2.h>
+#include <arpa/inet.h>
+//#include <winsock2.h>
 
 
 typedef int bool;
@@ -113,7 +113,13 @@ bool setCarryFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t
 						return false;
 					}
 				} break;
+			case 0x0b:{
+					if(field1 == 0){	//CP Rd, #data
 
+					} else{				//CP Rd, @Rs
+
+					}
+			}
 			case 0x83:{
 
 				int16_t result = regValue + newValue;
@@ -159,7 +165,13 @@ bool setSignFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t 
 						return false;
 					}
 				} break;
+			case 0x0b:{
+					if(field1 == 0){	//CP Rd, #data
 
+					} else{				//CP Rd, @Rs
+
+					}
+			}
 			case 0x8b:{
 					int16_t tempNewValue = newValue;
 					int16_t result = regValue - tempNewValue;
@@ -196,7 +208,13 @@ bool setOverflowFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint
 						
 					}
 				} break;
+			case 0x0b:{
+					if(field1 == 0){	//CP Rd, #data
 
+					} else{				//CP Rd, @Rs
+
+					}
+			}
 			case 0x83:{
 
 				int16_t result = regValue + newValue;
@@ -1628,7 +1646,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 													break;
 									} break;
 						case 0x5f:	switch(field1){
-										case 0x00:	printf("CALL %04x\t", code[1]);		//CALL address
+										case 0x00:	printf("CALL %04x", code[1]);		//CALL address
 													opwords = 2;
 													break;
 										default:	printf("CALL %04x(", code[1]);		//CALL address(Rd)
@@ -2031,7 +2049,7 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 						case 0x9d:	printf("NOP");							//NO INSTRUCTION
 									break;
 						case 0x9e:	switch(field1){
-										case 0x00:	printf("RET %01x\t", field2);	//RET cc
+										case 0x00:	printf("RET %01x", field2);	//RET cc
 													break;
 										default:	printf("How did you get here?");
 													break;
@@ -2047,7 +2065,6 @@ int Disassemble8002(uint16_t *codebuffer, int pc){
 									findRegister(field2);
 									printf(", ");
 									findRegister(field1);
-									printf("\t");
 									break;
 						case 0xa2:	printf("RESB ");						//RESB Rbd, #b
 									findregRegister(field1);
@@ -2834,7 +2851,11 @@ int Emulate8002(State8002* state){
 							}	break;
 				case 0x0b: {
 								if(field1 == 0){	//CP Rd, #data
-									uint16_t res = readReg16(field2, state) - opcode[1];
+									uint16_t dest = readReg16(field2, state);
+									setCarryFlag(dest, opcode[1], upperHalf, field1, state);
+									setSignFlag(dest, opcode[1], upperHalf, field1, state);
+									setOverflowFlag(dest, opcode[1], upperHalf, field1, state);					 
+									state->cc.z = (dest - opcode[1] == 0);
 									state->pc += 2;
 								} else{				//CP Rd, @Rs
 									uint16_t res = readReg16(field2, state);
@@ -3474,7 +3495,6 @@ int Emulate8002(State8002* state){
 								state->cc.s = (signRes < 0);
 
 								setCarryFlag(readReg16(field2, state), readReg16(field1, state), upperHalf, field1, state);
-
 								setOverflowFlag(readReg16(field2, state), readReg16(field1, state), upperHalf, field1, state);
 
 								writeReg16(field2, state, res);
@@ -3536,7 +3556,10 @@ int Emulate8002(State8002* state){
 				case 0xa6: UnimplementedInstruction(state);	break;
 				case 0xa7: UnimplementedInstruction(state);	break;
 				case 0xa8: UnimplementedInstruction(state); break;
-				case 0xa9: UnimplementedInstruction(state);	break;
+				case 0xa9: {	//INC Rd, #n
+								uint16_t res = readReg16(field1, state) + field2;
+								writeReg16(field1, state, res);
+							}	break;
 				case 0xaa: UnimplementedInstruction(state);	break;
 				case 0xab: UnimplementedInstruction(state); break;
 				case 0xac: UnimplementedInstruction(state);	break;
