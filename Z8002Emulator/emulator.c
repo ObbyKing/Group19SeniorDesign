@@ -2,8 +2,8 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-#include <arpa/inet.h>
-//#include <winsock2.h>
+//#include <arpa/inet.h>
+#include <winsock2.h>
 
 
 typedef int bool;
@@ -114,9 +114,26 @@ bool setCarryFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t
 					}
 				} break;
 
-			case 0x8b:{
+			case 0x83:{
+
+				int16_t result = regValue + newValue;
+				int16_t tempNewValue = newValue;
+				uint16_t check1 = regValue >> 15; //check MSB
+				if (check1 == 1 && (regValue > tempNewValue)){
+					state->cc.c = 0;
+				}
+
+				else{
+					state->cc.c = 1;
+				}
+
+			} break;
+
+			case 0x8b:{ //TODO
 					state->cc.c = 0;
 				} break;
+
+			
 
 			default: printf("not implemented flag"); break;
 	}
@@ -179,6 +196,22 @@ bool setOverflowFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint
 						
 					}
 				} break;
+
+			case 0x83:{
+
+				int16_t result = regValue + newValue;
+				int16_t tempNewValue = newValue;
+				uint16_t check1 = regValue >> 15; //check MSB
+				uint16_t check2 = tempNewValue >> 15; //check MSB
+				if ((check1 == 1 || check2 == 1) && (regValue != 0 && tempNewValue != 0)){
+					state->cc.c = 1;
+				}
+
+				else{
+					state->cc.c = 0;
+				}
+
+			} break;
 
 			case 0x8b:{
 					int16_t tempNewValue = newValue;
@@ -3433,8 +3466,19 @@ int Emulate8002(State8002* state){
 		    				} break;
 				case 0x82: UnimplementedInstruction(state);	break;
 				case 0x83: {	//SUB Rd, Rs
+
 								uint16_t res = readReg16(field2, state) - readReg16(field1, state);
+								int16_t signRes = readReg16(field2, state) - readReg16(field1, state);
+
+								state->cc.z = (res == 0);
+								state->cc.s = (signRes < 0);
+
+								setCarryFlag(readReg16(field2, state), readReg16(field1, state), upperHalf, field1, state);
+
+								setOverflowFlag(readReg16(field2, state), readReg16(field1, state), upperHalf, field1, state);
+
 								writeReg16(field2, state, res);
+
 							}	break;
 				case 0x84: UnimplementedInstruction(state);	break;
 				case 0x85: UnimplementedInstruction(state);	break;
