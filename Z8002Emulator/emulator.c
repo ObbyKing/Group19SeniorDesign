@@ -3,7 +3,7 @@
 #include <stdlib.h>
 #include <stdint.h>
 //#include <arpa/inet.h>
-#include <winsock2.h>
+//#include <winsock2.h>
 
 
 typedef int bool;
@@ -45,6 +45,9 @@ typedef	struct State8002{
 	uint8_t 	*instructionSpace_SM; // 64k memory space the Z8002 does not use segmented mode
 	uint8_t 	*stack_NM; // 64k memory space the Z8002 does not use segmented mode
 	uint8_t 	*stack_SM; // 64k memory space the Z8002 does not use segmented mode
+
+	uint8_t 	*memory; // placeholder, must be removed
+	uint8_t 	sp;
 
 	uint16_t 	sp_NM;	// Register 15 is the stack pointer, there are two, for system and normal mode
 	uint16_t 	sp_SM;	// Register 15 is the stack pointer
@@ -98,9 +101,26 @@ bool setCarryFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t
 					}
 				} break;
 
-			case 0x8b:{
+			case 0x83:{
+
+				int16_t result = regValue + newValue;
+				int16_t tempNewValue = newValue;
+				uint16_t check1 = regValue >> 15; //check MSB
+				if (check1 == 1 && (regValue > tempNewValue)){
+					state->cc.c = 0;
+				}
+
+				else{
+					state->cc.c = 1;
+				}
+
+			} break;
+
+			case 0x8b:{ //TODO
 					state->cc.c = 0;
 				} break;
+
+
 
 			default: printf("not implemented flag"); break;
 	}
@@ -128,15 +148,9 @@ bool setSignFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t 
 				} break;
 
 			case 0x8b:{
-
 					int16_t tempNewValue = newValue;
 					int16_t result = regValue - tempNewValue;
-					if (result >= 0){
-						state->cc.s = 0;
-					}
-					else{
-						state->cc.s = 1;
-					}
+					state->cc.s = (result >= 0);
 				} break;
 
 			default: printf("not implemented flag"); break;
@@ -149,12 +163,12 @@ bool setOverflowFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint
 	switch(upperhalf){
 			case 0x00:{ //ADDB,  IM or IR
 					if(field1 == 0){	// ADDB Rbd, #data
-						printf(" \n");
-						printf(" orig: %d", regValue);
-						printf(" new: %d", newValue);
+						// printf(" \n");
+						// printf(" orig: %d", regValue);
+						// printf(" new: %d", newValue);
 						int8_t result = regValue + newValue;
-						printf(" res: %d", result);
-						printf(" \n");
+						// printf(" res: %d", result);
+						// printf(" \n");
 						if (result < 0 && regValue > 0 && newValue > 0){
 							state->cc.v = 1;
 							return true;
@@ -170,13 +184,29 @@ bool setOverflowFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint
 					}
 				} break;
 
+			case 0x83:{
+
+				int16_t result = regValue + newValue;
+				int16_t tempNewValue = newValue;
+				uint16_t check1 = regValue >> 15; //check MSB
+				uint16_t check2 = tempNewValue >> 15; //check MSB
+				if ((check1 == 1 || check2 == 1) && (regValue != 0 && tempNewValue != 0)){
+					state->cc.c = 1;
+				}
+
+				else{
+					state->cc.c = 0;
+				}
+
+			} break;
+
 			case 0x8b:{
 					int16_t tempNewValue = newValue;
 					int16_t result = regValue - tempNewValue;
-					printf(" dest: %d", regValue);
-					printf(" src: %d", tempNewValue);
-					printf(" res: %d", result);
-					printf(" \n");
+					// printf(" dest: %d", regValue);
+					// printf(" src: %d", tempNewValue);
+					// printf(" res: %d", result);
+					// printf(" \n");
 
 					if ((regValue > 0 && (tempNewValue < 0 && result < 0)) || (regValue < 0 && (tempNewValue > 0 && result > 0))){
 						state->cc.v = 1;
@@ -205,10 +235,10 @@ bool setHalfCarryFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uin
 						check2 = check2 >> 4;
 						check3 = check3 >> 4;
 
-						printf(" check1: %d", check1);
-						printf(" check2: %d", check2);
-						printf(" check3: %d", check3);
-						printf(" \n");
+						// printf(" check1: %d", check1);
+						// printf(" check2: %d", check2);
+						// printf(" check3: %d", check3);
+						// printf(" \n");
 
 						if ((check1 == 1 && (check2 == 0 && check3 == 0)) || (check1 == 1 && (check2 == 1 && check3 == 1))){
 							state->cc.h = 1;
@@ -1790,10 +1820,10 @@ int Disassemble8002(uint16_t instruction, State8002* state, Pins8002* pins){
 
 									} break;
 						case 0x5e:	switch(field1){
-										case 0x00:	printf("JP %02x, %04x", field2, code[1]);	//JP cc, address
+										case 0x00:	printf("JP %01x, %04x", field2, code[1]);	//JP cc, address
 													opwords = 2;
 													break;
-										default:	printf("JP %02x, %04x(", field2, code[1]);	//JP cc, address(Rd)
+										default:	printf("JP %01x, %04x(", field2, code[1]);	//JP cc, address(Rd)
 													findRegister(field1);
 													printf(")");
 													opwords = 2;
@@ -2772,7 +2802,7 @@ void systemCall(State8002* state, uint16_t identifier){
 	pushSys(state->pc, state);
 	updateFCW(state);
 	pushSys(state->FCW);
-	pushSys(identifier);
+	pushSys(identifier,state);
 	state->systemNormal = 1;
 }
 
@@ -3185,8 +3215,8 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								uint16_t dest = readReg16(field1, state);
 								dest -= 2;
 								writeReg16(field1, state, dest);
-								uint16_t temp = readMem_Data(src,data,pins);
-								writeMem_Data(dest,temp,data,pins);
+								uint16_t temp = readMem_Data(src,state,pins);
+								writeMem_Data(dest,temp,state,pins);
 							}	break;
 				case 0x14: {
 								if(field1 == 0){	//LDL RRd, #data
@@ -3331,7 +3361,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 							}	break;
 				case 0x29: {	//INC @Rd, #n
 								uint16_t offset = readReg16(field1, state);
-								uint16_t out += field2;
+								uint16_t out = field2;
 
 								writeMem_Data(offset,out,state,pins);
 
@@ -3350,7 +3380,7 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 							}	break;
 				case 0x2b: {	//DEC @Rd, #n
 								uint16_t offset = readReg16(field1, state);
-								uint16_t out -= field2;
+								uint16_t out = field2-1;
 								writeMem_Data(offset,out,state,pins);
 
 							}	break;
@@ -3630,18 +3660,16 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0x53: UnimplementedInstruction(state);	break;
 				case 0x54: UnimplementedInstruction(state); break;
 				case 0x55: UnimplementedInstruction(state);	break;
-				case 0x56: {//ADDL, DA or X
-								uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
+				case 0x56: {
+								uint32_t res = readReg32(field2, state);
+								if(field1 == 0){	//ADDL RRd, address
+									res += state->memory[opcode[1]];
+								} else{				//ADDL RRd, addr(Rs)
+									uint16_t offset = readReg16(field1, state);
+									res += state->memory[offset + opcode[1]];
+								}
+								writeReg32(field2, state, res);
 								state->pc+=2;
-								uint32_t* memptr32 = state->memory;
-
-								if(field1 == 0){	//ADDL (DA)
-									*destinationReg32 = fix_32(fix_32(*destinationReg32) + fix_32(*(memptr32 + opcode[1]))); //assuming we only use the top bits
-								}
-								else{ //ADDL (IR)
-									uint32_t* sourceReg32 = returnLongRegisterPointer(field1, state);
-									*destinationReg32 = fix_32(fix_32(*destinationReg32) + fix_32(*(memptr32 + opcode[1] + fix_32(*sourceReg32)))); //assuming we only use the top bits
-								}
 							} break;
 				case 0x57: UnimplementedInstruction(state); break;
 				case 0x58: UnimplementedInstruction(state);	break;
@@ -3650,7 +3678,13 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0x5b: UnimplementedInstruction(state);	break;
 				case 0x5c: UnimplementedInstruction(state);	break;
 				case 0x5d: UnimplementedInstruction(state); break;
-				case 0x5e: UnimplementedInstruction(state);	break;
+				case 0x5e: {	//JP CC, address
+								if(checkConditionCode(field2, state->cc)){
+									state->pc = opcode[1];
+								} else{
+									state->pc += 2;
+								}
+							}	break;
 				case 0x5f: {
 								if(field1 == 0){	//CALL address
 									state->sp -= 2;
@@ -3695,18 +3729,30 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0x7d: UnimplementedInstruction(state);	break;
 				case 0x7e: UnimplementedInstruction(state); break;
 				case 0x7f: UnimplementedInstruction(state);	break;
-				case 0x80: { // ADDB (R)
-						    	uint8_t* destinationReg8 = returnByteRegisterPointer(field2, state);
-						    	uint8_t* sourceReg8 = returnByteRegisterPointer(field1, state);
-						    	*destinationReg8 = *destinationReg8 + *sourceReg8;
+				case 0x80: { // ADDB Rbd, Rbs
+						    	uint8_t res = readReg8(field2, state) + readReg8(field1, state);
+						    	writeReg8(field2, state, res);
 		   					} break;
-				case 0x81: { // ADD (R)
-								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-						    	uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
-						    	*destinationReg16 = fix_16(fix_16(*destinationReg16) + fix_16(*sourceReg16));
+				case 0x81: { // ADD Rd, Rs
+								uint16_t res = readReg16(field2, state) + readReg16(field1, state);
+								writeReg16(field2, state, res);
 		    				} break;
 				case 0x82: UnimplementedInstruction(state);	break;
-				case 0x83: UnimplementedInstruction(state);	break;
+				case 0x83: {	//SUB Rd, Rs
+
+								uint16_t res = readReg16(field2, state) - readReg16(field1, state);
+								int16_t signRes = readReg16(field2, state) - readReg16(field1, state);
+
+								state->cc.z = (res == 0);
+								state->cc.s = (signRes < 0);
+
+								setCarryFlag(readReg16(field2, state), readReg16(field1, state), upperHalf, field1, state);
+
+								setOverflowFlag(readReg16(field2, state), readReg16(field1, state), upperHalf, field1, state);
+
+								writeReg16(field2, state, res);
+
+							}	break;
 				case 0x84: UnimplementedInstruction(state);	break;
 				case 0x85: UnimplementedInstruction(state);	break;
 				case 0x86: UnimplementedInstruction(state);	break;
@@ -3714,18 +3760,14 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0x88: UnimplementedInstruction(state);	break;
 				case 0x89: UnimplementedInstruction(state);	break;
 				case 0x8a: UnimplementedInstruction(state);	break;
-				case 0x8b: {//CP R
-								uint16_t* destinationReg16 = returnWordRegisterPointer(field2, state);
-							 	uint16_t* sourceReg16 = returnWordRegisterPointer(field1, state);
+				case 0x8b: {	//CP Rd, Rs
+								uint16_t dest = readReg16(field2, state);
+							 	uint16_t src = readReg16(field1, state);
 
-								//setCarryFlag(fix_16(*destinationReg16), fix_16(*sourceReg16), upperHalf, field1, state);
-								setSignFlag(*destinationReg16, (*sourceReg16), upperHalf, field1, state);
-								setOverflowFlag((*destinationReg16), (*sourceReg16), upperHalf, field1, state);
-
-							 	uint32_t result = fix_16(*destinationReg16) - fix_16(*sourceReg16);
-
-								state->cc.z = (result == 0);
-
+								setCarryFlag(dest, src, upperHalf, field1, state);
+								setSignFlag(dest, src, upperHalf, field1, state);
+								setOverflowFlag(dest, src, upperHalf, field1, state);
+								state->cc.z = (dest - src == 0);
 							} break;
 				case 0x8c: UnimplementedInstruction(state);	break;
 				case 0x8d: UnimplementedInstruction(state);	break;
@@ -3737,10 +3779,9 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0x93: UnimplementedInstruction(state); break;
 				case 0x94: UnimplementedInstruction(state);	break;
 				case 0x95: UnimplementedInstruction(state);	break;
-				case 0x96: {//ADDL, R
-								uint32_t* destinationReg32 = returnLongRegisterPointer(field2, state);
-				      			uint32_t* sourceReg32 = returnLongRegisterPointer(field1, state);
-				      			*destinationReg32 = fix_32(fix_32(*destinationReg32) + fix_32(*sourceReg32));
+				case 0x96: {	//ADDL RRd, RRs
+								uint32_t res = readReg32(field2, state) + readReg32(field1, state);
+								writeReg32(field2, state, res);
 							} break;
 				case 0x97: UnimplementedInstruction(state);	break;
 				case 0x98: UnimplementedInstruction(state);	break;
@@ -3798,8 +3839,8 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 
 	//printf("\t");
 	printf("R0: %x R1: %x, R2: %x, R3: %x, SP: %x  ||| OP: %x\n",readReg16(0, state), readReg16(1, state), readReg16(2, state),readReg16(3, state), readReg16(15, state),upperHalf);
-	printf("c: %i, z: %i, s: %i v: %i, d: %d, h: %d\n", state->cc.c, state->cc.z, state->cc.s, state->cc.v, state->cc.d, state->cc.h);
-	printf(" \n");
+	//printf("c: %i, z: %i, s: %i v: %i, d: %d, h: %d\n", state->cc.c, state->cc.z, state->cc.s, state->cc.v, state->cc.d, state->cc.h);
+	//printf(" \n");
 
 	if(upperFour == 0xFF){
 		return 1;
@@ -3846,10 +3887,10 @@ State8002* InitState(void){
 	state->instructionSpace_SM = malloc(0x10000);
 	state->stack_NM = malloc(0x10000);
 	state->stack_SM = malloc(0x10000);
-	state->sys_SP = 0x10000;
-	state->norm_SP = 0x10000;
+	state->sp_SM = 0x10000;
+	state->sp_NM = 0x10000;
 
-	state->SN = 0;
+	state->systemNormal = 0;
 	state->NVIE = 0;
 	state->VIE = 0;
 	state->EPA = 0;
@@ -3904,9 +3945,9 @@ int main (int argc, char**argv){
 	int done = 0;
 	State8002* state = InitState();
 	Pins8002* pins = InitPins();
-	writeZBus(address, pins);
 
-	ReadFileIntoMemoryAt(state, "testCondition.t", 0);
+
+	ReadFileIntoMemoryAt(state, "EuclidAlgorithm.t", 0);
 	//ReadFileIntoMemoryAt(state, "jr.t", 2);
 
 
