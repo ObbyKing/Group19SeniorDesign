@@ -2,7 +2,7 @@
 #include <string.h>
 #include <stdlib.h>
 #include <stdint.h>
-//#include <arpa/inet.h>
+#include <arpa/inet.h>
 //#include <winsock2.h>
 
 
@@ -100,7 +100,13 @@ bool setCarryFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t
 						return false;
 					}
 				} break;
+			case 0x0b:{
+					if(field1 == 0){	//CP Rd, #data
 
+					} else{				//CP Rd, @Rs
+
+					}
+			}
 			case 0x83:{
 
 				int16_t result = regValue + newValue;
@@ -146,7 +152,13 @@ bool setSignFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint8_t 
 						return false;
 					}
 				} break;
+			case 0x0b:{
+					if(field1 == 0){	//CP Rd, #data
 
+					} else{				//CP Rd, @Rs
+
+					}
+			}
 			case 0x8b:{
 					int16_t tempNewValue = newValue;
 					int16_t result = regValue - tempNewValue;
@@ -183,7 +195,13 @@ bool setOverflowFlag(int16_t regValue, int32_t newValue, uint8_t upperhalf, uint
 
 					}
 				} break;
+			case 0x0b:{
+					if(field1 == 0){	//CP Rd, #data
 
+					} else{				//CP Rd, @Rs
+
+					}
+			}
 			case 0x83:{
 
 				int16_t result = regValue + newValue;
@@ -437,7 +455,9 @@ uint16_t readMem(uint16_t address, State8002* state, Pins8002* pins){
 	writeZBus(address, pins);
 	pins->addressStrobe = 1;
 	pins->memoryREQ = 0;
+	//printf("zbp bef: %04x\n", pins->dataBus);
 	zBusMemRead(state,pins);
+	//printf("zpb aff: %04x\n", pins->dataBus);
 	pins->dataStrobe = 0;
 	pins->memoryREQ = 1;
 	pins->dataStrobe = 1;
@@ -586,27 +606,27 @@ void zBusMemRead(State8002* state, Pins8002* pins){ //zbus mem request
 				switch (status){
 					case 0b1000:{// data memory
 						pins->dataBus = fix_16(*(uint16_t*)&state->dataSpace_NM[pins->dataBus]);
-					}
+					}break;
 					case 0b1001:{// stack memory
 						pins->dataBus = fix_16(*(uint16_t*)&state->stack_NM[pins->dataBus]);
-					}
+					}break;
 					case 0b1100:{// instruction memory
 						pins->dataBus = fix_16(*(uint16_t*)&state->instructionSpace_NM[pins->dataBus]);
 
-					}
+					}break;
 				}
 			}
 		else if(pins->normalSystem == 0){
 				switch (status){
 					case 0b1000:{// data memory
 						pins->dataBus = fix_16(*(uint16_t*)&state->dataSpace_SM[pins->dataBus]);
-					}
+					}break;
 					case 0b1001:{// stack memory
 						pins->dataBus = fix_16(*(uint16_t*)&state->stack_SM[pins->dataBus]);
-					}
+					}break;
 					case 0b1100:{// instruction memory
 						pins->dataBus = fix_16(*(uint16_t*)&state->instructionSpace_SM[pins->dataBus]);
-					}
+					}break;
 				}
 			}
 		if(pins->byteWord == 1){ //mask for byte
@@ -621,37 +641,45 @@ void zBusMemRead(State8002* state, Pins8002* pins){ //zbus mem request
 	}
 }
 void zBusMemWrite(uint16_t data,State8002* state, Pins8002* pins){
+
+
 	uint8_t status = pins->status;
 	uint8_t evenOdd = pins->dataBus % 2;
 	uint16_t address = pins->dataBus;
-	pins->dataBus = fix_16(data);
+	pins->dataBus = data;
 	pins->dataStrobe = 0;
 	if(pins->readWrite == 0 && pins->memoryREQ == 0){// memory request, read into processor
-		if(pins->byteWord = 0){
+		if(pins->byteWord == 0){
+
 			if(pins->normalSystem == 1){
 					switch (status){
 						case 0b1000:{// data memory
-							state->dataSpace_NM[address] = pins->dataBus;
-						}
+							*(uint16_t*)&state->dataSpace_NM[address] = fix_16(data);
+							printf("good\n" );
+
+						}break;
 						case 0b1001:{// stack memory
-							state->stack_NM[address] = pins->dataBus;
-						}
+								*(uint16_t*)&state->stack_NM[address] = fix_16(data);
+						}break;
 						case 0b1100:{// instruction memory
-							state->instructionSpace_NM[address] = pins->dataBus;
-						}
+								*(uint16_t*)&state->instructionSpace_NM[address] = fix_16(data);
+								printf("bad\n" );
+
+						}break;
 					}
 				}
 			else if(pins->normalSystem == 0){
 					switch (status){
 						case 0b1000:{// data memory
-							state->dataSpace_SM[address] = pins->dataBus;
-						}
+								*(uint16_t*)&state->dataSpace_SM[address] = fix_16(data);
+
+						}break;
 						case 0b1001:{// stack memory
-							state->stack_SM[address] = pins->dataBus;
-						}
+								*(uint16_t*)&state->stack_SM[address] = fix_16(data);
+						}break;
 						case 0b1100:{// instruction memory
-							state->instructionSpace_SM[address] = pins->dataBus;
-						}
+								*(uint16_t*)&state->instructionSpace_SM[address] = fix_16(data);
+						}break;
 					}
 				}
 		}
@@ -668,26 +696,26 @@ void zBusMemWrite(uint16_t data,State8002* state, Pins8002* pins){
 					switch (status){
 						case 0b1000:{// data memory
 							state->dataSpace_NM[address] = datatemp;
-						}
+						}break;
 						case 0b1001:{// stack memory
 							state->stack_NM[address] = datatemp;
-						}
+						}break;
 						case 0b1100:{// instruction memory
 							state->instructionSpace_NM[address] = datatemp;
-						}
+						}break;
 					}
 				}
 			else if(pins->normalSystem == 0){
 					switch (status){
 						case 0b1000:{// data memory
 							state->dataSpace_SM[address] = datatemp;
-						}
+						}break;
 						case 0b1001:{// stack memory
 							state->stack_SM[address] = datatemp;
-						}
+						}break;
 						case 0b1100:{// instruction memory
 							state->instructionSpace_SM[address] = datatemp;
-						}
+						}break;
 					}
 				}
 		}
@@ -1832,7 +1860,7 @@ int Disassemble8002(uint16_t instruction, State8002* state, Pins8002* pins){
 													break;
 									} break;
 						case 0x5f:	switch(field1){
-										case 0x00:	printf("CALL %04x\t", code[1]);		//CALL address
+										case 0x00:	printf("CALL %04x", code[1]);		//CALL address
 													opwords = 2;
 													break;
 										default:	printf("CALL %04x(", code[1]);		//CALL address(Rd)
@@ -2235,7 +2263,7 @@ int Disassemble8002(uint16_t instruction, State8002* state, Pins8002* pins){
 						case 0x9d:	printf("NOP");							//NO INSTRUCTION
 									break;
 						case 0x9e:	switch(field1){
-										case 0x00:	printf("RET %01x\t", field2);	//RET cc
+										case 0x00:	printf("RET %01x", field2);	//RET cc
 													break;
 										default:	printf("How did you get here?");
 													break;
@@ -2251,7 +2279,6 @@ int Disassemble8002(uint16_t instruction, State8002* state, Pins8002* pins){
 									findRegister(field2);
 									printf(", ");
 									findRegister(field1);
-									printf("\t");
 									break;
 						case 0xa2:	printf("RESB ");						//RESB Rbd, #b
 									findregRegister(field1);
@@ -3059,7 +3086,11 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 							}	break;
 				case 0x0b: {
 								if(field1 == 0){	//CP Rd, #data
-									uint16_t res = readReg16(field2, state) - opcode[1];
+									uint16_t dest = readReg16(field2, state);
+									setCarryFlag(dest, opcode[1], upperHalf, field1, state);
+									setSignFlag(dest, opcode[1], upperHalf, field1, state);
+									setOverflowFlag(dest, opcode[1], upperHalf, field1, state);
+									state->cc.z = (dest - opcode[1] == 0);
 									state->pc += 2;
 								} else{				//CP Rd, @Rs
 									uint16_t res = readReg16(field2, state);
@@ -3749,7 +3780,6 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 								state->cc.s = (signRes < 0);
 
 								setCarryFlag(readReg16(field2, state), readReg16(field1, state), upperHalf, field1, state);
-
 								setOverflowFlag(readReg16(field2, state), readReg16(field1, state), upperHalf, field1, state);
 
 								writeReg16(field2, state, res);
@@ -3811,7 +3841,10 @@ int Emulate8002(uint16_t instruction, State8002* state, Pins8002* pins){
 				case 0xa6: UnimplementedInstruction(state);	break;
 				case 0xa7: UnimplementedInstruction(state);	break;
 				case 0xa8: UnimplementedInstruction(state); break;
-				case 0xa9: UnimplementedInstruction(state);	break;
+				case 0xa9: {	//INC Rd, #n
+								uint16_t res = readReg16(field1, state) + field2;
+								writeReg16(field1, state, res);
+							}	break;
 				case 0xaa: UnimplementedInstruction(state);	break;
 				case 0xab: UnimplementedInstruction(state); break;
 				case 0xac: UnimplementedInstruction(state);	break;
@@ -3880,8 +3913,8 @@ State8002* InitState(void){
 
 	state->pc = 0;
 	state->dataSpace_NM = malloc(0x10000); // 64k
-	state->dataSpace_SM = malloc(0x10000); // 64k
 	state->instructionSpace_NM = malloc(0x10000);
+	state->dataSpace_SM = malloc(0x10000); // 64k
 	state->instructionSpace_SM = malloc(0x10000);
 	state->stack_NM = malloc(0x10000);
 	state->stack_SM = malloc(0x10000);
@@ -3952,11 +3985,51 @@ int main (int argc, char**argv){
 	while (done == 0){
 
 		uint16_t instruction = readMem_Instruction(state->pc,state,pins);
+		// printf("%04x\n", readMem_Instruction(0x0000,state,pins));
+		// printf("%04x\n", readMem_Instruction(0x0002,state,pins));
+		// printf("%04x\n", readMem_Instruction(0x0004,state,pins));
+		// printf("%04x\n", readMem_Instruction(0x0006,state,pins));
+		// printf("%04x\n", readMem_Instruction(0x0008,state,pins));
+		// printf("%02x\n", state->instructionSpace_NM[0]);
+		// printf("%02x\n", state->instructionSpace_NM[1]);
+		// printf("%02x\n", state->instructionSpace_NM[2]);
+		// printf("%02x\n", state->instructionSpace_NM[3]);
+		// printf("%02x\n", state->instructionSpace_NM[4]);
+		// printf("%02x\n", state->instructionSpace_NM[5]);
+
+
+		// writeMem_Data(0x0000,0x1234,state,pins);
+		// writeMem_Data(0x0002,0x5678,state,pins);
+		// writeMem_Data(0x0004,0x9abc,state,pins);
+		// printf("%02x\n", *(uint16_t*)&state->dataSpace_NM[0]);
+		// printf("%02x\n", state->dataSpace_NM[1]);
+		// printf("%02x\n", state->dataSpace_NM[2]);
+		// printf("%02x\n", state->dataSpace_NM[3]);
+		// printf("%02x\n", state->dataSpace_NM[4]);
+		// printf("%02x\n", state->dataSpace_NM[5]);
+		// printf("%02x\n", state->dataSpace_NM[0]);
+		// printf("%02x\n", state->dataSpace_NM[1]);
+		// printf("%02x\n", state->dataSpace_NM[2]);
+		// printf("%02x\n", state->dataSpace_NM[3]);
+		// printf("%02x\n", state->dataSpace_NM[4]);
+		// printf("%02x\n", state->dataSpace_NM[5]);
+
+
+
+
+
+		// printf("%04x\n", readMem_Data(0x0000,state,pins));
+		// printf("%04x\n", readMem_Data(0x0002,state,pins));
+		// printf("%04x\n", readMem_Data(0x0004,state,pins));
+		// printf("%04x\n", readMem_Data(0x0006,state,pins));
+		// printf("%04x\n", readMem_Data(0x0008,state,pins));
+
 
 		printf("%04x\n", state->pc);
 		printf("%04x\n",instruction);
 		//Disassemble8002(instruction,state, pins);
 		done = Emulate8002(instruction,state, pins);
+
 	}
 	return 0;
 }
