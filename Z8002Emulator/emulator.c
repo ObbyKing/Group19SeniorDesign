@@ -4,6 +4,7 @@
 #include <stdint.h>
 #include <arpa/inet.h>
 //#include <winsock2.h>
+#include <time.h>
 
 
 typedef int bool;
@@ -69,6 +70,8 @@ typedef	struct State8002{
 	uint16_t 	*memory; // 64k memory space the Z8002 does not use segmented mode
 	uint16_t 	*memory2; // 64k memory space the Z8002 does not use segmented mode
 	uint8_t status;
+
+	uint16_t	instructionCounter[8];  //order is LD,CALL,CP,JP,INC,SUB, RET, ADD
 
 } State8002;
 
@@ -2618,7 +2621,7 @@ int Emulate8002(State8002* state){
 	uint8_t field1 = (opcode[0] >> 4) & (0x0F);
 	uint8_t field2 = opcode[0] & 0x0F;
 
-	Disassemble8002(state->memory, state->pc);
+	//Disassemble8002(state->memory, state->pc);
 
 	//state->memory[0] = 2;
 
@@ -2638,7 +2641,11 @@ int Emulate8002(State8002* state){
 					}
 				}break;
 
-				default: printf("bad");done=1; break;
+				default: {
+							//printf("bad");
+						  	done=1; 
+						  	break;
+						  }
 
 			}
 		}break;
@@ -2694,6 +2701,7 @@ int Emulate8002(State8002* state){
 									res += state->memory[offset];
 									writeReg16(field2, state, res);
 								}
+								state->instructionCounter[7] += 1;
 							} break;
 				case 0x02:{
 								if(field1 == 0){	// SUBB Rbd, #data
@@ -2857,10 +2865,12 @@ int Emulate8002(State8002* state){
 									setOverflowFlag(dest, opcode[1], upperHalf, field1, state);					 
 									state->cc.z = (dest - opcode[1] == 0);
 									state->pc += 2;
+									state->instructionCounter[2] += 1;
 								} else{				//CP Rd, @Rs
 									uint16_t res = readReg16(field2, state);
 									uint16_t offset = readReg16(field1, state);
 									res -= state->memory[offset];
+									state->instructionCounter[2] += 1;
 								}
 							}	break;
 				case 0x0c: {
@@ -3105,9 +3115,12 @@ int Emulate8002(State8002* state){
 								if(field1 == 0){	//LD Rd, #data
 									writeReg16(field2, state, opcode[1]);
 									state->pc += 2;
+									state->instructionCounter[0] += 1;
+
 								} else{				//Ld Rd, @Rs
 									uint16_t offset = readReg16(field1, state);
 									writeReg16(field2, state, state->memory[offset]);
+									state->instructionCounter[0] += 1;
 								}
 							} break;
 				case 0x22: UnimplementedInstruction(state); break;
@@ -3432,6 +3445,7 @@ int Emulate8002(State8002* state){
 								} else{
 									state->pc += 2;
 								}
+								state->instructionCounter[3] += 1;
 							}	break;
 				case 0x5f: {	
 								if(field1 == 0){	//CALL address
@@ -3439,11 +3453,13 @@ int Emulate8002(State8002* state){
 									state->sp -= 2;
 									state->memory[state->sp] = state->pc;
 									state->pc = opcode[1];
+									state->instructionCounter[1] += 1;
 								} else{				//CALL address(Rd)
 									uint16_t offset = readReg16(field1, state);
 									state->pc -= 2;
 									state->memory[state->sp] = state->pc;
 									state->pc = state->memory[offset];	//TODO?
+									state->instructionCounter[1] += 1;
 								}
 							}	break;
 				case 0x60: UnimplementedInstruction(state); break;
@@ -3499,6 +3515,7 @@ int Emulate8002(State8002* state){
 								setOverflowFlag(readReg16(field2, state), readReg16(field1, state), upperHalf, field1, state);
 
 								writeReg16(field2, state, res);
+								state->instructionCounter[5] += 1;
 
 							}	break;
 				case 0x84: UnimplementedInstruction(state);	break;
@@ -3516,6 +3533,7 @@ int Emulate8002(State8002* state){
 								setSignFlag(dest, src, upperHalf, field1, state);
 								setOverflowFlag(dest, src, upperHalf, field1, state);					 
 								state->cc.z = (dest - src == 0);
+								state->instructionCounter[2] += 1;
 							} break;
 				case 0x8c: UnimplementedInstruction(state);	break;
 				case 0x8d: UnimplementedInstruction(state);	break;
@@ -3543,12 +3561,14 @@ int Emulate8002(State8002* state){
 									state->pc = state->memory[state->sp];
 								}
 								state->sp += 2;
+								state->instructionCounter[6] += 1;
 							}	break;
 				case 0x9f: UnimplementedInstruction(state); break;
 				case 0xa0: UnimplementedInstruction(state);	break;
 				case 0xa1: {	//LD Rd, Rs
 								uint16_t source = readReg16(field1, state);
 								writeReg16(field2, state, source);
+								state->instructionCounter[0] += 1;
 							}	break;
 				case 0xa2: UnimplementedInstruction(state);	break;
 				case 0xa3: UnimplementedInstruction(state);	break;
@@ -3560,6 +3580,7 @@ int Emulate8002(State8002* state){
 				case 0xa9: {	//INC Rd, #n
 								uint16_t res = readReg16(field1, state) + field2;
 								writeReg16(field1, state, res);
+								state->instructionCounter[4] += 1;
 							}	break;
 				case 0xaa: UnimplementedInstruction(state);	break;
 				case 0xab: UnimplementedInstruction(state); break;
@@ -3584,12 +3605,13 @@ int Emulate8002(State8002* state){
 				case 0xbe: UnimplementedInstruction(state);	break;
 				case 0xbf: UnimplementedInstruction(state);	break;
 				default: printf("wrong place");done=1; break;
+
 			}
 		}
 	}
 
 	//printf("\t");
-	printf("R0: %x R1: %x, R2: %x, R3: %x, SP: %x  ||| OP: %x\n",readReg16(0, state), readReg16(1, state), readReg16(2, state),readReg16(3, state), readReg16(15, state),upperHalf);
+	//printf("R0: %x R1: %x, R2: %x, R3: %x, SP: %x  ||| OP: %x\n",readReg16(0, state), readReg16(1, state), readReg16(2, state),readReg16(3, state), readReg16(15, state),upperHalf);
 	//printf("c: %i, z: %i, s: %i v: %i, d: %d, h: %d\n", state->cc.c, state->cc.z, state->cc.s, state->cc.v, state->cc.d, state->cc.h);
 	//printf(" \n");
 
@@ -3631,6 +3653,9 @@ State8002* Init8002(void){
 	// state->cc.h = 1;
 	state->memory = malloc(0x10000); // 64k
 
+	for(int i = 0; i < 8; i++)
+		state->instructionCounter[i] = 0;
+
 
 
 
@@ -3661,13 +3686,29 @@ State8002* Init8002(void){
 }
 
 int main (int argc, char**argv){
+
 	int done = 0;
 	State8002* state = Init8002();
 
 	ReadFileIntoMemoryAt(state, "EuclidAlgorithm.t", 0);
 	//ReadFileIntoMemoryAt(state, "jr.t", 2);
+
+	time_t startTime = clock();
 	while (done == 0){
 		done = Emulate8002(state);
 	}
+	time_t endTime = clock();
+
+	int cycleLengths[8] = {7,12,7,7,4,4,10,7};
+	uint64_t totalCycles = 0;
+	for(int i = 0; i < 8; i++){
+		//printf("%i\n", state->instructionCounter[i]);
+		totalCycles += state->instructionCounter[i] * cycleLengths[i];
+	}
+
+	printf("Estimated Z8002 runtime: %f\n", totalCycles * 250 * .000001);
+	printf("Emumulator runtime     :  %f\n", (double)(endTime - startTime) * 1000 / (CLOCKS_PER_SEC));
+	printf("R0: %x R1: %x, R2: %x, R3: %x, SP: %x  \n",readReg16(0, state), readReg16(1, state), readReg16(2, state),readReg16(3, state), readReg16(15, state));
+
 	return 0;
 }
