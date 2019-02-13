@@ -3435,6 +3435,7 @@ int Emulate8002(State8002* state){
 							}	break;
 				case 0x5f: {	
 								if(field1 == 0){	//CALL address
+									state->pc += 2;
 									state->sp -= 2;
 									state->memory[state->sp] = state->pc;
 									state->pc = opcode[1];
